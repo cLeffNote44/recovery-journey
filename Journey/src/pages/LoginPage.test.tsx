@@ -43,10 +43,10 @@ describe('LoginPage', () => {
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
     })
 
-    it('should render the Recover branding', async () => {
+    it('should render the Journey branding', async () => {
       await renderLoginPage()
 
-      expect(screen.getAllByText('Recover').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Journey').length).toBeGreaterThan(0)
       expect(screen.getAllByText(/clinician portal/i).length).toBeGreaterThan(0)
     })
 

@@ -18,6 +18,7 @@ import {
   FilePlus2,
 } from 'lucide-react'
 import DocumentEditor from '../components/DocumentEditor'
+import DocumentFormRenderer, { templateHasFormFields } from '../components/DocumentFormRenderer'
 import { documentTemplates } from '../data/documentTemplates'
 import { SectionErrorBoundary } from '../components/ErrorBoundary'
 import { UploadModal, PreviewModal, type Document } from '../components/Documents'
@@ -477,14 +478,23 @@ export default function Documents() {
         getFileIcon={getFileIcon}
       />
 
-      {/* Document Editor */}
+      {/* Document Editor — use form renderer for template-based documents, TipTap for free-form */}
       {editingDoc && (
-        <DocumentEditor
-          initialContent={editingDoc.content}
-          documentName={editingDoc.name}
-          onClose={() => setEditingDoc(null)}
-          onSave={handleSaveDocument}
-        />
+        editingDoc.content && templateHasFormFields(editingDoc.content) ? (
+          <DocumentFormRenderer
+            templateHtml={editingDoc.content}
+            documentName={editingDoc.name}
+            onClose={() => setEditingDoc(null)}
+            onSave={(_values, renderedHtml) => handleSaveDocument(renderedHtml)}
+          />
+        ) : (
+          <DocumentEditor
+            initialContent={editingDoc.content}
+            documentName={editingDoc.name}
+            onClose={() => setEditingDoc(null)}
+            onSave={handleSaveDocument}
+          />
+        )
       )}
     </div>
     </SectionErrorBoundary>

@@ -70,7 +70,7 @@ export default function LoginPage() {
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-primary-900 text-white p-12 flex-col justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Recover</h1>
+          <h1 className="text-3xl font-bold">Journey</h1>
           <p className="text-primary-300 mt-1">Clinician Portal</p>
         </div>
 
@@ -85,7 +85,7 @@ export default function LoginPage() {
         </div>
 
         <div className="text-primary-400 text-sm">
-          © 2025 Recover System. All rights reserved.
+          © 2026 Recovery Journey. All rights reserved.
         </div>
       </div>
 
@@ -94,7 +94,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
-            <h1 className="text-2xl font-bold text-primary-900">Recover</h1>
+            <h1 className="text-2xl font-bold text-primary-900">Journey</h1>
             <p className="text-gray-500">Clinician Portal</p>
           </div>
 

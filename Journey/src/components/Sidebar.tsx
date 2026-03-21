@@ -59,7 +59,7 @@ export default function Sidebar() {
       {/* Logo / Brand */}
       <div className="p-5 border-b border-primary-800">
         <h1 className="text-xl font-bold tracking-tight">
-          Recover
+          Journey
         </h1>
         <p className="text-primary-300 text-xs mt-1">
           {isSuperAdmin ? 'Super Admin' : 'Clinician Portal'}
