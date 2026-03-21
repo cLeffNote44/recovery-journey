@@ -5,6 +5,34 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-03-21
+
+### Added
+- Marketing website with 9 pages (Landing, Features, Patient App, Clinician Portal, Pricing, Compliance, Contact, Privacy, Terms)
+- Custom brand identity: logo mark (ascending path + triumph figure), favicon, app icons, OG social image
+- 18 app screenshots captured and displayed in phone/browser frame mockups
+- Dedicated `/recover-app` page showcasing all 16 patient app screens with detailed descriptions
+- Dedicated `/journey-portal` page showcasing clinician desktop portal with feature grid
+- Professional documentation: README, LICENSE, CHANGELOG, SECURITY, ARCHITECTURE, API Reference, Setup Guide, Deployment Guide
+- Monitoring integration (Sentry/LogRocket) with provider-agnostic service layer
+- Two-factor authentication setup flow in Journey Settings
+- Scrollable bottom navigation bar in Recover app
+
+### Fixed
+- Backend `sanitizeEmail` angle bracket stripping order bug
+- CloudSyncPanel TypeScript errors (nullability, arity mismatches)
+- WebSocket handler console.logs replaced with pino structured logger
+- CI/CD pipeline: corrupted backup script, SQL injection in restore, insecure PHI temp file cleanup
+- Deploy script: fake health check replaced with actual container health polling
+- 127 failing Recover tests fixed (type mismatches, UI drift, stale selectors)
+
+### Security
+- Backup script no longer corrupts SQL dumps by mixing stderr into output
+- Restore script validates database names against regex to prevent SQL injection
+- Decrypted PHI temp files now use `shred -u` for secure deletion
+- Added `npm audit` dependency vulnerability scanning to CI pipeline
+- Pre-migration database backups added to CD pipeline
+
 ## [1.0.0] - 2026-03-21
 
 ### Added

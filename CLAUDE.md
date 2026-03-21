@@ -121,3 +121,35 @@ These are not optional patterns — they are compliance requirements:
 - GitHub Actions: `.github/workflows/ci.yml` (lint + test + build per workspace)
 - Husky pre-commit hook runs ESLint + Prettier on staged files
 - Deployment via `scripts/deploy.sh` with staging/production environments
+
+## Version Control & Release Process
+
+**Repository**: `github.com/cLeffNote44/recovery-journey` (private)
+**Current version**: See `package.json` root and `CHANGELOG.md`
+
+### Versioning Rules (Semantic Versioning)
+
+Follow [semver](https://semver.org/) — `MAJOR.MINOR.PATCH`:
+- **PATCH** (1.0.x): Bug fixes, test fixes, dependency updates, documentation changes
+- **MINOR** (1.x.0): New features, new pages, new API endpoints, UI enhancements
+- **MAJOR** (x.0.0): Breaking changes to API, database schema changes requiring migration, architecture changes
+
+### When Pushing Changes
+
+After committing and pushing changes, **always** do the following:
+
+1. **Update the version** in root `package.json` according to semver
+2. **Update `CHANGELOG.md`** — add a new version entry at the top with:
+   - Date in format `YYYY-MM-DD`
+   - Sections as needed: `Added`, `Changed`, `Fixed`, `Removed`, `Security`
+   - Brief descriptions of what changed and why
+3. **Create a git tag**: `git tag vX.Y.Z`
+4. **Push the tag**: `git push origin vX.Y.Z`
+5. **Create a GitHub release**: `gh release create vX.Y.Z --title "Recovery Journey vX.Y.Z" --notes-file -` with release notes from the changelog
+
+### Marketing Website
+
+- **Vercel project**: `website-eight-beta-84.vercel.app`
+- **Planned domain**: `recoverjourney.com` (not yet purchased)
+- Deploy with: `cd website && vercel --yes --prod`
+- Website is NOT part of the npm workspaces — it's a standalone Next.js project in `website/`
