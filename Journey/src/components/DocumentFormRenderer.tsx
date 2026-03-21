@@ -58,23 +58,7 @@ interface ParsedBlock {
 // Parsing helpers
 // ---------------------------------------------------------------------------
 
-/** Matches 3+ consecutive underscores, optionally grouped with / or - separators for dates/phones/SSN. */
-const UNDERSCORE_RE = /_{3,}/g
-
-/** Matches checkbox character followed by a label word. */
-const CHECKBOX_RE = /☐\s*([^☐<]*)/g
-
-/** Detect bracket placeholder patterns like [Facility Name]. */
-const BRACKET_RE = /\[([A-Z][^\]]{2,})\]/g
-
-/** Detect date-like patterns: ____/____/________ */
-const DATE_PATTERN_RE = /_{3,}\/_{3,}\/_{3,}/g
-
-/** Detect phone-like patterns: (____) ____-________ */
-const PHONE_PATTERN_RE = /\(_{3,}\)\s*_{3,}-_{3,}/g
-
-/** Detect SSN-like patterns: _______-______-_________ */
-const SSN_PATTERN_RE = /_{3,}-_{3,}-_{3,}/g
+// Pattern regexes are created inline in parseInlineHtml to avoid global lastIndex issues.
 
 /**
  * Determine what "type" a given underscore sequence represents, based on

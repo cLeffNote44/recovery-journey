@@ -5,6 +5,14 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-03-21
+
+### Added
+- Documents tab on PatientDetail page showing patient-specific documents
+- "New Document" button on patient profile with patient pre-selected in template picker
+- View button opens documents in read-only form renderer
+- Mock patient documents generated per patient for demo purposes
+
 ## [1.3.0] - 2026-03-21
 
 ### Added

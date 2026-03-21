@@ -47,9 +47,11 @@ function createWrapper() {
       },
     },
   })
-  return ({ children }: { children: ReactNode }) => (
+  const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
+  Wrapper.displayName = 'TestQueryWrapper'
+  return Wrapper
 }
 
 describe('usePatients', () => {
@@ -202,11 +204,11 @@ describe('useCreatePatient', () => {
 
   it('should create a patient successfully', async () => {
     const newPatient = {
-      facility_id: 'facility-1',
-      first_name: 'New',
-      last_name: 'Patient',
-      date_of_birth: '1990-01-01',
-      sobriety_date: '2025-01-01',
+      facilityId: 'facility-1',
+      firstName: 'New',
+      lastName: 'Patient',
+      dateOfBirth: '1990-01-01',
+      sobrietyDate: '2025-01-01',
     }
 
     vi.mocked(patientsAPI.create).mockResolvedValueOnce({
@@ -237,11 +239,11 @@ describe('useCreatePatient', () => {
 
     await expect(
       result.current.mutateAsync({
-        facility_id: 'facility-1',
-        first_name: 'Test',
-        last_name: 'User',
-        date_of_birth: '1990-01-01',
-        sobriety_date: '2025-01-01',
+        facilityId: 'facility-1',
+        firstName: 'Test',
+        lastName: 'User',
+        dateOfBirth: '1990-01-01',
+        sobrietyDate: '2025-01-01',
       })
     ).rejects.toThrow('Validation failed')
 
@@ -264,9 +266,9 @@ describe('useUpdatePatient', () => {
       wrapper: createWrapper(),
     })
 
-    await result.current.mutateAsync({ id: '1', data: { first_name: 'Updated' } })
+    await result.current.mutateAsync({ id: '1', data: { firstName: 'Updated' } })
 
-    expect(patientsAPI.update).toHaveBeenCalledWith('1', { first_name: 'Updated' })
+    expect(patientsAPI.update).toHaveBeenCalledWith('1', { firstName: 'Updated' })
     expect(showToast.success).toHaveBeenCalledWith('Patient updated successfully!')
   })
 
@@ -281,7 +283,7 @@ describe('useUpdatePatient', () => {
     })
 
     await expect(
-      result.current.mutateAsync({ id: '999', data: { first_name: 'Updated' } })
+      result.current.mutateAsync({ id: '999', data: { firstName: 'Updated' } })
     ).rejects.toThrow('Patient not found')
   })
 })

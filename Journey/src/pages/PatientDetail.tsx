@@ -16,6 +16,9 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
+  Eye,
+  Plus,
+  FilePlus,
 } from 'lucide-react'
 import { patientsAPI } from '../services/api'
 import { auditLog } from '../services/auditLog'
@@ -29,12 +32,15 @@ import {
 } from '../data/mockData'
 import { PageLoading } from '../components/LoadingState'
 import { SectionErrorBoundary } from '../components/ErrorBoundary'
+import DocumentFormRenderer, { templateHasFormFields } from '../components/DocumentFormRenderer'
+import { CreateDocumentModal, type Document } from '../components/Documents'
+import { documentTemplates, templateList, type DocumentTemplate } from '../data/documentTemplates'
 
 export default function PatientDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [showFullTimeline, setShowFullTimeline] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'checkins'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'checkins' | 'documents'>('overview')
   const [patient, setPatient] = useState<MockPatientDetail | null>(null)
   const [timeline, setTimeline] = useState<TimelineEvent[]>([])
   const [checkIns, setCheckIns] = useState<CheckIn[]>([])
@@ -118,6 +124,13 @@ export default function PatientDetail() {
 
         {activeTab === 'checkins' && (
           <CheckInsTab checkIns={checkIns} />
+        )}
+
+        {activeTab === 'documents' && (
+          <DocumentsTab
+            patientId={id || ''}
+            patientName={patient ? `${patient.first_name} ${patient.last_name}` : ''}
+          />
         )}
       </div>
     </SectionErrorBoundary>
@@ -240,8 +253,8 @@ function PhaseProgress({ phase, progress }: PhaseProgressProps) {
 // ============================================================================
 
 interface TabNavigationProps {
-  activeTab: 'overview' | 'timeline' | 'checkins'
-  onTabChange: (tab: 'overview' | 'timeline' | 'checkins') => void
+  activeTab: 'overview' | 'timeline' | 'checkins' | 'documents'
+  onTabChange: (tab: 'overview' | 'timeline' | 'checkins' | 'documents') => void
 }
 
 function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
@@ -249,6 +262,7 @@ function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
     { id: 'overview' as const, label: 'Overview' },
     { id: 'timeline' as const, label: 'Progress Timeline' },
     { id: 'checkins' as const, label: 'Check-ins' },
+    { id: 'documents' as const, label: 'Documents' },
   ]
 
   return (
@@ -588,5 +602,256 @@ function CheckInsTab({ checkIns }: CheckInsTabProps) {
         ))}
       </div>
     </div>
+  )
+}
+
+// ============================================================================
+// DOCUMENTS TAB COMPONENT
+// ============================================================================
+
+interface PatientDocument extends Document {
+  createdBy: string
+  formValues?: Record<string, string>
+  templateId?: string
+}
+
+const getCategoryBadge = (category: string) => {
+  const colors: Record<string, string> = {
+    intake: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    medical: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    consent: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    insurance: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    progress: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    discharge: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+    other: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+  }
+  return (
+    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[category] || colors.other}`}>
+      {category.charAt(0).toUpperCase() + category.slice(1)}
+    </span>
+  )
+}
+
+/**
+ * Build mock patient documents keyed by patient name.
+ * The PatientDetail page uses mock data with id overridden from the URL,
+ * but the patient name from mockPatientDetail is always "John Doe".
+ * We seed documents for that patient plus a generic set so the tab works
+ * regardless of which patient ID is loaded.
+ */
+function getMockPatientDocuments(patientId: string, patientName: string): PatientDocument[] {
+  return [
+    {
+      id: `pd-detail-1`,
+      name: `Patient Intake Form - ${patientName}`,
+      type: 'document',
+      category: 'intake',
+      size: '245 KB',
+      uploadedBy: 'Dr. Martinez',
+      uploadedAt: '2025-11-20',
+      patientId,
+      patientName,
+      content: documentTemplates.patientIntake,
+      createdBy: 'Dr. Martinez',
+      templateId: 'tpl-intake',
+    },
+    {
+      id: `pd-detail-2`,
+      name: `Consent for Treatment - ${patientName}`,
+      type: 'document',
+      category: 'consent',
+      size: '124 KB',
+      uploadedBy: 'Lisa Anderson',
+      uploadedAt: '2025-11-18',
+      patientId,
+      patientName,
+      content: documentTemplates.consentTreatment,
+      createdBy: 'Lisa Anderson',
+      templateId: 'tpl-consent',
+    },
+    {
+      id: `pd-detail-3`,
+      name: `Progress Note - ${patientName}`,
+      type: 'document',
+      category: 'progress',
+      size: '98 KB',
+      uploadedBy: 'Dr. Thompson',
+      uploadedAt: '2025-12-02',
+      patientId,
+      patientName,
+      content: documentTemplates.progressNote,
+      createdBy: 'Dr. Thompson',
+      templateId: 'tpl-progress',
+    },
+  ]
+}
+
+interface DocumentsTabProps {
+  patientId: string
+  patientName: string
+}
+
+function DocumentsTab({ patientId, patientName }: DocumentsTabProps) {
+  const [documents, setDocuments] = useState<PatientDocument[]>(() =>
+    getMockPatientDocuments(patientId, patientName)
+  )
+  const [viewingDoc, setViewingDoc] = useState<PatientDocument | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createTemplate, setCreateTemplate] = useState<DocumentTemplate | null>(null)
+
+  // When the "New Document" button is clicked, pick the first template by default
+  const handleNewDocument = () => {
+    setCreateTemplate(templateList[0])
+    setShowCreateModal(true)
+  }
+
+  const handleCreateDocument = (data: {
+    title: string
+    patientId: string
+    patientName: string
+    category: string
+    templateKey: DocumentTemplate['templateKey']
+  }) => {
+    const templateContent = documentTemplates[data.templateKey]
+    const newDoc: PatientDocument = {
+      id: `pd-detail-${Date.now()}`,
+      name: data.title,
+      type: 'document',
+      category: data.category as PatientDocument['category'],
+      size: '0 KB',
+      uploadedBy: 'Current User',
+      uploadedAt: new Date().toISOString().split('T')[0],
+      patientId: data.patientId,
+      patientName: data.patientName,
+      content: templateContent,
+      createdBy: 'Current User',
+      templateId: templateList.find(t => t.templateKey === data.templateKey)?.id,
+    }
+    setDocuments(prev => [newDoc, ...prev])
+    setShowCreateModal(false)
+    setCreateTemplate(null)
+  }
+
+  return (
+    <>
+      {/* Header with New Document button */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Patient Documents
+          <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+            ({documents.length})
+          </span>
+        </h3>
+        <button
+          onClick={handleNewDocument}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+        >
+          <Plus className="w-4 h-4" />
+          New Document
+        </button>
+      </div>
+
+      {/* Document list or empty state */}
+      {documents.length === 0 ? (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-card border border-gray-100 dark:border-gray-700 p-12 text-center">
+          <FilePlus className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            No documents yet
+          </h4>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            Create a document for this patient using one of the available templates.
+          </p>
+          <button
+            onClick={handleNewDocument}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            Create First Document
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {documents.map((doc) => (
+            <div
+              key={doc.id}
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-card border border-gray-100 dark:border-gray-700 p-4 flex items-center justify-between hover:border-blue-200 dark:hover:border-blue-800 transition-colors"
+            >
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="flex-shrink-0 w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                    {doc.name}
+                  </h4>
+                  <div className="flex items-center gap-3 mt-1">
+                    {getCategoryBadge(doc.category)}
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {doc.uploadedAt}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      by {doc.createdBy}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setViewingDoc(doc)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors flex-shrink-0"
+              >
+                <Eye className="w-4 h-4" />
+                View
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Document viewer modal (read-only) */}
+      {viewingDoc && viewingDoc.content && templateHasFormFields(viewingDoc.content) && (
+        <DocumentFormRenderer
+          templateHtml={viewingDoc.content}
+          documentName={viewingDoc.name}
+          initialValues={viewingDoc.formValues}
+          onSave={() => {}}
+          onClose={() => setViewingDoc(null)}
+          readOnly
+        />
+      )}
+
+      {/* For documents without form fields, show a simple preview */}
+      {viewingDoc && viewingDoc.content && !templateHasFormFields(viewingDoc.content) && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-3xl w-full max-h-[80vh] overflow-auto p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{viewingDoc.name}</h3>
+              <button
+                onClick={() => setViewingDoc(null)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                &times;
+              </button>
+            </div>
+            <div
+              className="prose dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: viewingDoc.content }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Create Document Modal — patient is pre-selected */}
+      <CreateDocumentModal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false)
+          setCreateTemplate(null)
+        }}
+        template={createTemplate}
+        patients={[{ id: patientId, name: patientName }]}
+        onCreateDocument={handleCreateDocument}
+      />
+    </>
   )
 }

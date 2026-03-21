@@ -86,8 +86,13 @@ export default function Patients() {
   const handleCreatePatient = async (formData: PatientFormData) => {
     try {
       const response = await patientsAPI.create({
-        ...formData,
-        facility_id: 'current-facility-id', // Would come from auth context
+        facilityId: 'current-facility-id', // Would come from auth context
+        firstName: formData.first_name,
+        lastName: formData.last_name,
+        dateOfBirth: formData.date_of_birth,
+        sobrietyDate: formData.sobriety_date,
+        phone: formData.phone,
+        email: formData.email,
       })
       if (response.success && response.registration_key) {
         setNewPatientKey(response.registration_key)

@@ -17,7 +17,8 @@
 import * as Sentry from '@sentry/react'
 
 let isInitialized = false
-let logRocketIdentified = false
+// logRocketIdentified: uncomment when LogRocket is activated
+// let logRocketIdentified = false
 
 /**
  * Initialize all monitoring providers.
@@ -67,9 +68,11 @@ export function initMonitoring(): void {
     })
 
     if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
       console.log(`[Monitoring] Sentry initialized for ${environment}`)
     }
   } else if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
     console.log('[Monitoring] No Sentry DSN provided, error tracking disabled')
   }
 
@@ -155,13 +158,13 @@ export function setUser(user: { id: string; email?: string; role?: string } | nu
 
   // LogRocket user identification stub
   /*
-  if (user && !logRocketIdentified) {
+  if (user) {
     import('logrocket').then((LogRocket) => {
       LogRocket.default.identify(user.id, {
         email: user.email,
         role: user.role,
       })
-      logRocketIdentified = true
+      // logRocketIdentified = true
     })
   }
   */
