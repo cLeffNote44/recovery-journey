@@ -24,11 +24,11 @@ export function Header() {
           <Link href="/" className="flex items-center gap-2.5 group">
             <img
               src="/logo.svg"
-              alt="Recovery Journey"
+              alt="RecoverJourney"
               className="h-8 w-auto"
             />
             <span className="hidden sm:inline text-lg font-bold text-white tracking-tight">
-              Recovery<span className="text-teal-400">Journey</span>
+              Recover<span className="text-teal-400">Journey</span>
             </span>
           </Link>
 

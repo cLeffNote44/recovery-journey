@@ -11,9 +11,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Recovery Journey | HIPAA-Compliant Recovery Management',
+  title: 'RecoverJourney | AI-Powered Recovery Management Platform',
   description:
-    'HIPAA & 42 CFR Part 2 compliant substance abuse recovery management platform. Streamline facility operations, secure messaging, and patient engagement for rehab centers and addiction counselors.',
+    'The only recovery management platform with AI-powered relapse risk prediction, real-time patient engagement, and built-in HIPAA & 42 CFR Part 2 compliance. Desktop portal for clinicians. Mobile app for patients.',
   keywords: [
     'HIPAA compliant',
     'substance abuse recovery',
@@ -23,23 +23,25 @@ export const metadata: Metadata = {
     'recovery management',
     'patient engagement',
     'clinical workflow',
+    'relapse prediction',
+    'AI recovery platform',
   ],
   metadataBase: new URL('https://recoverjourney.com'),
   openGraph: {
-    title: 'Recovery Journey | HIPAA-Compliant Recovery Management',
+    title: 'RecoverJourney | AI-Powered Recovery Management Platform',
     description:
-      'Streamline recovery management with our HIPAA & 42 CFR Part 2 compliant platform. Built for rehab facilities, outpatient clinics, and addiction counselors.',
+      'The only recovery platform with AI relapse risk prediction, real-time patient engagement, and built-in HIPAA & 42 CFR Part 2 compliance. Desktop portal for clinicians. Mobile app for patients.',
     url: 'https://recoverjourney.com',
-    siteName: 'Recovery Journey',
+    siteName: 'RecoverJourney',
     type: 'website',
     locale: 'en_US',
     images: [{ url: '/og-image.svg' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Recovery Journey | HIPAA-Compliant Recovery Management',
+    title: 'RecoverJourney | AI-Powered Recovery Management Platform',
     description:
-      'Streamline recovery management with our HIPAA & 42 CFR Part 2 compliant platform.',
+      'The only recovery platform with AI relapse risk prediction, real-time patient engagement, and built-in HIPAA compliance.',
   },
   icons: {
     icon: '/favicon.svg',

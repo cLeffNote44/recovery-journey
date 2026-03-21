@@ -5,6 +5,23 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-03-21
+
+### Added
+- Complete landing page overhaul based on competitor analysis (Kipu, Sunwave, TherapyNotes, SimplePractice)
+- AI Relapse Risk Prediction section — dedicated showcase of the 3-7 day prediction algorithm
+- "What You Won't Find Anywhere Else" section — 6 unique differentiators (Traffic Light, 12-Step Digital, Money Saved, Crisis Protocols, Smart Form-Fill, Offline Privacy)
+- Social proof section with evidence-based credibility signals
+- Outcome-focused hero: "Predict Relapse Before It Happens" with product visuals
+- "Book a Consultation" CTA strategy (premium positioning vs generic "Request Demo")
+
+### Changed
+- Brand name updated to "RecoverJourney" (one word) across all site metadata, header, footer, and page copy
+- Hero rewritten from feature-focused to outcome-focused messaging
+- Stats bar changed from generic (256-bit, 99.9%) to meaningful product stats (14 templates, 40+ badges, 7 skill modules, 4 crisis protocols)
+- Pricing copy improved: "No hidden fees. No compliance add-ons."
+- FAQ expanded with AI prediction and offline access questions
+
 ## [1.4.0] - 2026-03-21
 
 ### Added

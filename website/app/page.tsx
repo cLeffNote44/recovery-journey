@@ -8,137 +8,180 @@ import {
   Server,
   ShieldCheck,
   Monitor,
-  MessageSquare,
   Smartphone,
-  Settings,
-  Users,
-  HeartPulse,
   ArrowRight,
-  ClipboardList,
-  FileText,
-  Bell,
-  BarChart3,
-  Activity,
   CheckCircle2,
+  Brain,
+  AlertTriangle,
+  Target,
+  Activity,
+  TrafficCone,
+  BookOpen,
+  DollarSign,
+  Siren,
+  FileText,
+  WifiOff,
+  Rocket,
+  Link2,
+  Eye,
+  Clock,
+  KeyRound,
+  Scale,
+  Sparkles,
+  Phone,
+  BarChart3,
+  Award,
+  BookOpenCheck,
+  HeartPulse,
 } from 'lucide-react';
 
-import Image from 'next/image';
-import { Hero } from '@/components/Hero';
-import { FeatureCard } from '@/components/FeatureCard';
 import { PricingCard } from '@/components/PricingCard';
 import { ComplianceBadge } from '@/components/ComplianceBadge';
 import { FAQ } from '@/components/FAQ';
 import { BrowserFrame } from '@/components/BrowserFrame';
 import { PhoneFrame } from '@/components/PhoneFrame';
 
+/* ───────────────────────── DATA ───────────────────────── */
+
 const trustBadges = [
   { icon: ShieldCheck, title: 'HIPAA Compliant', description: 'Full Privacy & Security Rule adherence' },
   { icon: Lock, title: '42 CFR Part 2', description: 'Substance use disorder confidentiality' },
-  { icon: Server, title: '256-bit Encryption', description: 'AES-256 data encryption at rest & in transit' },
+  { icon: Server, title: 'AES-256 Encryption', description: 'Data encrypted at rest & in transit' },
   { icon: Shield, title: 'SOC 2 Ready', description: 'Enterprise security controls' },
 ];
 
-const features = [
+const heroStats = [
+  { value: '14', label: 'Clinical Form Templates' },
+  { value: '40+', label: 'Achievement Badges' },
+  { value: '7', label: 'Evidence-Based Skill Modules' },
+  { value: '4', label: 'Crisis Intervention Protocols' },
+];
+
+const aiFeatures = [
   {
-    icon: Monitor,
-    title: 'Facility Management',
-    description:
-      'A comprehensive clinician portal for managing patients, treatment plans, and facility operations. Role-based access ensures staff see only what they need.',
-    features: [
-      'Patient intake and management',
-      'Treatment plan builder',
-      'Staff role management',
-      'Dashboard and analytics',
-    ],
+    icon: Brain,
+    title: 'Predictive Intelligence',
+    description: 'Risk score 0\u2013100 with confidence metrics and timeframe projections.',
   },
   {
-    icon: MessageSquare,
-    title: 'Secure Messaging',
-    description:
-      'Real-time, HIPAA-compliant messaging between staff and patients. End-to-end encrypted with full audit trails for every conversation.',
-    features: [
-      'Real-time WebSocket messaging',
-      'End-to-end encryption',
-      'Message audit logging',
-      'File sharing with access controls',
-    ],
+    icon: AlertTriangle,
+    title: 'Key Warnings',
+    description: 'Identifies specific risk factors \u2014 social isolation, meeting decline, mood shifts.',
   },
   {
-    icon: Smartphone,
-    title: 'Patient Companion App',
+    icon: Target,
+    title: 'Ranked Interventions',
+    description: '10+ personalized actions prioritized by effectiveness and time required.',
+  },
+  {
+    icon: Activity,
+    title: 'HALT Integration',
+    description: 'Hungry, Angry, Lonely, Tired assessment feeds directly into prediction.',
+  },
+];
+
+const clinicianFeatures = [
+  'Patient management and intake',
+  'HIPAA-compliant messaging',
+  'Treatment plan builder with phase tracking',
+  '14 clinical form templates with smart form-fill',
+  'Appointment scheduling and calendar',
+  'Comprehensive audit logging',
+];
+
+const patientFeatures = [
+  'Dual progress tracking (sobriety + streak)',
+  'Daily mood check-ins with HALT assessment',
+  'AI relapse risk prediction',
+  '12-step digital work tracker',
+  '7 evidence-based skill modules',
+  '40+ achievement badges',
+  'Emergency support with crisis protocols',
+];
+
+const differentiators = [
+  {
+    icon: TrafficCone,
+    title: 'Traffic Light Relapse Prevention',
     description:
-      'A mobile app that keeps patients engaged in their recovery. Daily check-ins, resource access, and direct communication with their care team.',
-    features: [
-      'Daily mood and progress tracking',
-      'Recovery resource library',
-      'Appointment reminders',
-      'Biometric authentication',
-    ],
+      'Patients build their own Green/Yellow/Red zone action plans. Green for daily maintenance, Yellow for warning signs, Red for crisis response \u2014 with quick-dial to sponsors and therapists.',
+  },
+  {
+    icon: BookOpen,
+    title: '12-Step Digital Work Tracker',
+    description:
+      'Full step-by-step progress tracking with reflections, exercises, and sponsor notes. The first platform to digitize the 12-step process.',
+  },
+  {
+    icon: DollarSign,
+    title: 'Money Saved Calculator',
+    description:
+      'Show patients the tangible financial benefit of sobriety. Configurable cost-per-day tracks cumulative savings \u2014 real motivation beyond milestones.',
+  },
+  {
+    icon: Siren,
+    title: '4 Crisis Intervention Protocols',
+    description:
+      'Not just a list of hotline numbers. Four structured protocols: Immediate Urge, High-Risk Situation, Emotional Crisis, and Trigger Management \u2014 each with timed steps and grounding exercises.',
+  },
+  {
+    icon: FileText,
+    title: 'Smart Clinical Form-Fill',
+    description:
+      '14 templates that convert paper underscores into proper digital fields. Checkboxes become real checkboxes. Dates become date inputs. No more broken formatting.',
+  },
+  {
+    icon: WifiOff,
+    title: 'Offline-First Privacy',
+    description:
+      'Patient data stays on their device by default. No cloud dependency. No data collection. Optional sync when they choose. HIPAA-compliant by architecture, not just policy.',
   },
 ];
 
 const howItWorks = [
   {
     step: '01',
-    icon: Settings,
-    title: 'Deploy & Configure',
+    icon: Rocket,
+    title: 'Deploy in Days',
     description:
-      'Set up your facility in minutes. Configure roles, departments, and compliance settings. We handle the infrastructure so you can focus on care.',
+      'Set up your facility, configure roles, import patient list. No month-long implementations.',
   },
   {
     step: '02',
-    icon: Users,
-    title: 'Onboard Your Team',
+    icon: Link2,
+    title: 'Connect Your Patients',
     description:
-      'Invite counselors and staff with role-based access. Training takes less than an hour with our intuitive interface and guided setup.',
+      'Each patient gets a unique registration key. They download the Recover app and connect to your facility securely.',
   },
   {
     step: '03',
-    icon: HeartPulse,
-    title: 'Engage Patients',
+    icon: Eye,
+    title: 'Monitor & Intervene',
     description:
-      'Patients download the companion app, complete intake digitally, and stay connected to their care team throughout their recovery journey.',
+      'Track recovery progress, receive AI risk alerts, message patients directly, and document everything \u2014 all HIPAA-compliant.',
   },
 ];
 
-const clinicianFeatures = [
-  'Patient records and treatment plans',
-  'Facility-wide dashboard',
-  'Staff scheduling and management',
-  'Compliance audit reports',
-  'Secure internal messaging',
-  'Analytics and outcome tracking',
-];
-
-const patientFeatures = [
-  'Daily check-ins and mood tracking',
-  'Secure messaging with care team',
-  'Appointment scheduling',
-  'Recovery resource library',
-  'Progress milestones',
-  'Emergency contacts and crisis tools',
-];
-
-const complianceFeatures = [
+const complianceCards = [
   {
     icon: FileText,
     title: 'Complete Audit Trail',
-    description: 'Every action logged with user, timestamp, and resource accessed.',
+    description: 'Every PHI access logged with user, timestamp, and action.',
   },
   {
-    icon: Lock,
-    title: 'Access Controls',
-    description: 'Role-based permissions ensure minimum necessary access to PHI.',
+    icon: Clock,
+    title: 'Session Security',
+    description: '15-min auto-logout, tokens in memory only, 2FA.',
   },
   {
-    icon: Bell,
-    title: 'Session Management',
-    description: '15-minute auto-logout with warning. Tokens stored in memory only.',
-  },
-  {
-    icon: Shield,
+    icon: KeyRound,
     title: 'Data Encryption',
-    description: 'AES-256 encryption at rest. TLS 1.3 for all data in transit.',
+    description: 'AES-256 at rest, TLS 1.3 in transit.',
+  },
+  {
+    icon: Scale,
+    title: '42 CFR Part 2',
+    description: 'Substance use disorder confidentiality built into every feature.',
   },
 ];
 
@@ -152,6 +195,7 @@ const pricingTiers = [
       'Up to 25 patients',
       'Secure messaging',
       'Patient companion app',
+      'AI relapse risk prediction',
       'Basic reporting',
       'HIPAA compliance included',
       'Email support',
@@ -192,21 +236,46 @@ const pricingTiers = [
   },
 ];
 
+const trustPoints = [
+  {
+    icon: HeartPulse,
+    text: 'Built with input from addiction recovery professionals',
+  },
+  {
+    icon: ShieldCheck,
+    text: '805 automated tests ensuring reliability',
+  },
+  {
+    icon: BookOpenCheck,
+    text: 'Designed around evidence-based recovery principles from AA, NA, CBT, DBT, and mindfulness practices',
+  },
+];
+
 const faqItems = [
   {
-    question: 'Is Recovery Journey fully HIPAA compliant?',
+    question: 'How does the AI relapse prediction work?',
     answer:
-      'Yes. Recovery Journey is built from the ground up for HIPAA compliance. We implement all required technical safeguards including AES-256 encryption, role-based access controls, comprehensive audit logging, automatic session timeouts, and secure authentication. We also comply with 42 CFR Part 2 regulations specific to substance use disorder treatment records.',
+      'Our proprietary algorithm analyzes behavioral patterns from daily check-ins \u2014 mood trends, craving intensity, HALT scores (Hungry, Angry, Lonely, Tired), meeting attendance, and social isolation indicators. By comparing current patterns against known risk profiles, it generates a risk score from 0\u2013100 with confidence metrics, key warning factors, and ranked intervention recommendations. The system can identify elevated risk 3\u20137 days before a potential relapse event.',
+  },
+  {
+    question: 'Do patients need internet access to use the app?',
+    answer:
+      'No. The Recover patient app is built with an offline-first architecture. All patient data is stored locally on their device by default, and core features like check-ins, journal entries, skill modules, and crisis protocols work without any internet connection. When connectivity is available, patients can optionally sync with their facility for clinician visibility.',
+  },
+  {
+    question: 'Is RecoverJourney fully HIPAA compliant?',
+    answer:
+      'Yes. RecoverJourney is built from the ground up for HIPAA compliance. We implement all required technical safeguards including AES-256 encryption, role-based access controls, comprehensive audit logging, automatic session timeouts, and secure authentication. We also comply with 42 CFR Part 2 regulations specific to substance use disorder treatment records.',
   },
   {
     question: 'How long does implementation take?',
     answer:
-      'Most facilities are up and running within one to two weeks. The platform is designed for rapid deployment -- you can configure your facility, invite staff, and begin onboarding patients in days rather than months. Enterprise clients with custom integration needs typically complete full deployment within four to six weeks.',
+      'Most facilities are up and running within one to two weeks. The platform is designed for rapid deployment \u2014 you can configure your facility, invite staff, and begin onboarding patients in days rather than months. Enterprise clients with custom integration needs typically complete full deployment within four to six weeks.',
   },
   {
     question: 'Do you provide a Business Associate Agreement (BAA)?',
     answer:
-      'Yes. A BAA is included with all Enterprise plans and available upon request for Professional plan subscribers. The BAA covers all aspects of data handling, storage, and transmission within the Recovery Journey platform.',
+      'Yes. A BAA is included with all Enterprise plans and available upon request for Professional plan subscribers. The BAA covers all aspects of data handling, storage, and transmission within the RecoverJourney platform.',
   },
   {
     question: 'Can patients use the app on their personal devices?',
@@ -219,29 +288,124 @@ const faqItems = [
       'Your data remains accessible for 90 days after cancellation. During this period, you can export all records in standard formats. After 90 days, data is securely deleted in accordance with our data retention policy. We never hold data hostage and make it easy to migrate.',
   },
   {
-    question: 'Can Recovery Journey integrate with our existing EHR system?',
+    question: 'Can RecoverJourney integrate with our existing EHR system?',
     answer:
       'Enterprise plans include custom integration support. We offer REST APIs and can work with your technical team to build integrations with existing EHR, billing, and practice management systems. Contact our sales team to discuss your specific integration requirements.',
   },
-  {
-    question: 'How is data migration handled from our current system?',
-    answer:
-      'We provide guided data migration support for Professional and Enterprise plans. Our team works with you to securely transfer patient records, treatment plans, and historical data from your existing system. All migrations are performed with full encryption and audit logging to maintain compliance throughout the process.',
-  },
-  {
-    question: 'What kind of support is available?',
-    answer:
-      'Solo plans include email support with a 24-hour response time. Professional plans receive priority support with an 8-hour response time. Enterprise clients get a dedicated account manager, phone support, and guaranteed SLAs. All plans include access to our knowledge base and video training library.',
-  },
 ];
+
+/* ───────────────────────── PAGE ───────────────────────── */
 
 export default function HomePage() {
   return (
     <>
-      {/* Hero Section */}
-      <Hero />
+      {/* ─── HERO ─── */}
+      <section className="relative pt-32 pb-20 lg:pt-44 lg:pb-28 overflow-hidden">
+        {/* Background glow */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-teal-600/8 rounded-full blur-3xl" />
+        </div>
 
-      {/* Trust Bar */}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-4xl mx-auto mb-12 lg:mb-16">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium bg-teal-900/30 text-teal-400 border border-teal-800/50 mb-6">
+                <Sparkles className="w-3.5 h-3.5" />
+                AI-Powered Recovery Management
+              </span>
+            </motion.div>
+
+            <motion.h1
+              className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight mb-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              Predict Relapse Before{' '}
+              <span className="text-teal-400">It Happens</span>
+            </motion.h1>
+
+            <motion.p
+              className="text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto mb-10 leading-relaxed"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              The only recovery management platform with AI-powered risk
+              prediction, real-time patient engagement, and built-in HIPAA
+              compliance. Desktop portal for clinicians. Mobile app for patients.
+              One connected ecosystem.
+            </motion.p>
+
+            <motion.div
+              className="flex flex-col sm:flex-row items-center justify-center gap-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <Link
+                href="/contact"
+                className="inline-flex items-center gap-2 px-8 py-3.5 text-base font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-500 transition-all hover:shadow-lg hover:shadow-teal-500/25"
+              >
+                Book a Consultation
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/journey-portal"
+                className="inline-flex items-center gap-2 px-8 py-3.5 text-base font-semibold rounded-lg bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all"
+              >
+                Watch Product Tour
+              </Link>
+            </motion.div>
+          </div>
+
+          {/* Hero visual — dashboard + phone overlap */}
+          <motion.div
+            className="relative max-w-5xl mx-auto"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.4 }}
+          >
+            <BrowserFrame
+              src="/screenshots/journey-dashboard.png"
+              alt="RecoverJourney clinician dashboard showing patient census, admissions, and facility analytics"
+              className="mx-auto"
+            />
+            {/* Overlapping phone */}
+            <div className="absolute -bottom-8 -right-2 sm:right-4 lg:right-[-40px] z-10">
+              <PhoneFrame
+                src="/screenshots/recover-home.png"
+                alt="Recover patient app home screen"
+                className="!max-w-[140px] sm:!max-w-[180px] lg:!max-w-[220px]"
+              />
+            </div>
+          </motion.div>
+
+          {/* Stats bar */}
+          <motion.div
+            className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            {heroStats.map((stat, i) => (
+              <div key={stat.label} className="text-center">
+                <div className="text-3xl sm:text-4xl font-bold text-teal-400 mb-1">
+                  {stat.value}
+                </div>
+                <div className="text-sm text-slate-400">{stat.label}</div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ─── TRUST BAR ─── */}
       <section className="py-12 bg-navy-950/50 border-y border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -258,7 +422,216 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Features Overview */}
+      {/* ─── AI RELAPSE PREDICTION ─── */}
+      <section className="py-24 lg:py-32">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Phone screenshot */}
+            <motion.div
+              className="flex justify-center"
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <PhoneFrame
+                src="/screenshots/recover-home-risk.png"
+                alt="Recover app showing AI relapse risk prediction with risk score and recommended interventions"
+              />
+            </motion.div>
+
+            {/* Copy */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-teal-900/30 text-teal-400 border border-teal-800/50 mb-4">
+                <Brain className="w-3.5 h-3.5" />
+                Hero Differentiator
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+                AI-Powered Relapse Risk Prediction
+              </h2>
+              <p className="text-lg text-teal-400 font-medium mb-4">
+                The feature that sets RecoverJourney apart from every other
+                platform.
+              </p>
+              <p className="text-slate-400 leading-relaxed mb-8">
+                Our proprietary algorithm analyzes behavioral patterns &mdash;
+                check-in frequency, mood trends, craving intensity, HALT scores,
+                meeting attendance, and isolation indicators &mdash; to predict
+                relapse risk 3&ndash;7 days before it happens.
+              </p>
+
+              <div className="grid sm:grid-cols-2 gap-4 mb-8">
+                {aiFeatures.map((feature, index) => (
+                  <motion.div
+                    key={feature.title}
+                    className="p-4 rounded-xl bg-navy-800/50 border border-white/5"
+                    initial={{ opacity: 0, y: 15 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: index * 0.1 }}
+                  >
+                    <feature.icon className="w-6 h-6 text-teal-400 mb-2" />
+                    <h4 className="text-sm font-semibold text-white mb-1">
+                      {feature.title}
+                    </h4>
+                    <p className="text-xs text-slate-400">
+                      {feature.description}
+                    </p>
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="p-4 rounded-xl bg-teal-900/15 border border-teal-800/30">
+                <p className="text-sm text-teal-300 leading-relaxed">
+                  <strong>No other recovery platform predicts relapse risk.</strong>{' '}
+                  Most apps only track sobriety milestones after the fact.
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── TWO APPS, ONE PLATFORM ─── */}
+      <section className="py-24 lg:py-32 bg-navy-950/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            className="text-center max-w-3xl mx-auto mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              Two Apps, One Platform
+            </h2>
+            <p className="text-lg text-slate-400">
+              A desktop portal for your clinical team and a mobile app for
+              patients, seamlessly connected through a secure backend.
+            </p>
+          </motion.div>
+
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+            {/* Clinician Portal */}
+            <motion.div
+              className="p-8 rounded-2xl bg-navy-800/50 border border-white/5"
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-lg bg-blue-600/10 flex items-center justify-center">
+                  <Monitor className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">
+                    Journey &mdash; Clinician Portal
+                  </h3>
+                  <p className="text-sm text-slate-400">Desktop application</p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <BrowserFrame
+                  src="/screenshots/journey-dashboard.png"
+                  alt="Journey clinician dashboard showing patient census, admissions, and facility analytics"
+                  className="mx-auto"
+                />
+              </div>
+
+              <ul className="space-y-2.5 mb-6">
+                {clinicianFeatures.map((feature) => (
+                  <li
+                    key={feature}
+                    className="flex items-center gap-2.5 text-sm text-slate-300"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                href="/journey-portal"
+                className="inline-flex items-center gap-2 text-teal-400 font-medium text-sm hover:text-teal-300 transition-colors"
+              >
+                Explore Clinician Portal
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </motion.div>
+
+            {/* Patient App */}
+            <motion.div
+              className="p-8 rounded-2xl bg-navy-800/50 border border-white/5"
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-lg bg-emerald-600/10 flex items-center justify-center">
+                  <Smartphone className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">
+                    Recover &mdash; Patient App
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    Mobile and web application
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-center mb-6">
+                <PhoneFrame
+                  src="/screenshots/recover-home.png"
+                  alt="Recover patient app home screen showing 46 days clean and daily wellness tracking"
+                />
+              </div>
+
+              <ul className="space-y-2.5 mb-6">
+                {patientFeatures.map((feature) => (
+                  <li
+                    key={feature}
+                    className="flex items-center gap-2.5 text-sm text-slate-300"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                href="/recover-app"
+                className="inline-flex items-center gap-2 text-teal-400 font-medium text-sm hover:text-teal-300 transition-colors"
+              >
+                Explore Patient App
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </motion.div>
+          </div>
+
+          {/* Bridge text */}
+          <motion.p
+            className="text-center text-slate-400 mt-10 max-w-2xl mx-auto leading-relaxed"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            Everything syncs in real-time. When a patient checks in on their
+            phone, clinicians see it instantly on their dashboard.
+          </motion.p>
+        </div>
+      </section>
+
+      {/* ─── DIFFERENTIATORS ─── */}
       <section className="py-24 lg:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -269,31 +642,39 @@ export default function HomePage() {
             transition={{ duration: 0.5 }}
           >
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-              Everything You Need for Recovery Management
+              What You Won&apos;t Find Anywhere Else
             </h2>
             <p className="text-lg text-slate-400">
-              A complete platform connecting clinicians, staff, and patients
-              through secure, compliant tools designed for substance abuse
-              treatment.
+              Features that competitors simply don&apos;t have.
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <FeatureCard
-                key={feature.title}
-                icon={feature.icon}
-                title={feature.title}
-                description={feature.description}
-                features={feature.features}
-                delay={index * 0.15}
-              />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {differentiators.map((item, index) => (
+              <motion.div
+                key={item.title}
+                className="p-6 rounded-2xl bg-navy-800/50 border border-white/5 hover:border-teal-800/30 transition-colors"
+                initial={{ opacity: 0, y: 25 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+              >
+                <div className="w-11 h-11 rounded-xl bg-teal-600/10 flex items-center justify-center mb-4">
+                  <item.icon className="w-5 h-5 text-teal-400" />
+                </div>
+                <h3 className="text-base font-semibold text-white mb-2">
+                  {item.title}
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  {item.description}
+                </p>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* How It Works */}
+      {/* ─── HOW IT WORKS ─── */}
       <section className="py-24 lg:py-32 bg-navy-950/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -307,7 +688,7 @@ export default function HomePage() {
               Get Started in Days, Not Months
             </h2>
             <p className="text-lg text-slate-400">
-              Recovery Journey is designed for rapid deployment so your team can
+              RecoverJourney is designed for rapid deployment so your team can
               focus on what matters most.
             </p>
           </motion.div>
@@ -340,118 +721,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Platform Section */}
+      {/* ─── COMPLIANCE ─── */}
       <section className="py-24 lg:py-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            className="text-center max-w-2xl mx-auto mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-              Two Apps, One Platform
-            </h2>
-            <p className="text-lg text-slate-400">
-              A desktop portal for your clinical team and a mobile app for
-              patients, seamlessly connected through a secure backend.
-            </p>
-          </motion.div>
-
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
-            {/* Clinician Portal */}
-            <motion.div
-              className="p-8 rounded-2xl bg-navy-800/50 border border-white/5"
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-lg bg-blue-600/10 flex items-center justify-center">
-                  <Monitor className="w-5 h-5 text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">
-                    Journey -- Clinician Portal
-                  </h3>
-                  <p className="text-sm text-slate-400">Desktop application</p>
-                </div>
-              </div>
-
-              {/* Dashboard Screenshot */}
-              <div className="mb-6">
-                <BrowserFrame
-                  src="/screenshots/journey-dashboard.png"
-                  alt="Journey clinician dashboard showing patient census, admissions, and facility analytics"
-                  className="mx-auto"
-                />
-              </div>
-
-              <ul className="space-y-2.5">
-                {clinicianFeatures.map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-center gap-2.5 text-sm text-slate-300"
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-
-            {/* Patient App */}
-            <motion.div
-              className="p-8 rounded-2xl bg-navy-800/50 border border-white/5"
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-lg bg-emerald-600/10 flex items-center justify-center">
-                  <Smartphone className="w-5 h-5 text-emerald-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">
-                    Recover -- Patient App
-                  </h3>
-                  <p className="text-sm text-slate-400">
-                    Mobile and web application
-                  </p>
-                </div>
-              </div>
-
-              {/* Home Screen Screenshot */}
-              <div className="flex justify-center mb-6">
-                <div className="">
-                  <PhoneFrame
-                    src="/screenshots/recover-home.png"
-                    alt="Recover patient app home screen showing 46 days clean and daily wellness tracking"
-                  />
-                </div>
-              </div>
-
-              <ul className="space-y-2.5">
-                {patientFeatures.map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-center gap-2.5 text-sm text-slate-300"
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Compliance Section */}
-      <section className="py-24 lg:py-32 bg-navy-950/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <motion.div
@@ -464,19 +735,17 @@ export default function HomePage() {
                 Compliance Built In
               </span>
               <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-                Compliance Is Not an Afterthought
+                Built for Compliance from Day One
               </h2>
               <p className="text-lg text-slate-400 mb-6 leading-relaxed">
-                Recovery Journey was architected from day one to meet the
-                stringent requirements of HIPAA and 42 CFR Part 2. Every feature,
-                from authentication to messaging, is designed with compliance at
-                its core.
+                Unlike platforms that bolt on compliance after the fact,
+                RecoverJourney was architected from the ground up for HIPAA and
+                42 CFR Part 2.
               </p>
               <p className="text-slate-400 mb-8 leading-relaxed">
-                Unlike platforms that bolt on compliance features later, our
-                security and privacy controls are fundamental to the
-                architecture. This means fewer gaps, stronger protections, and
-                less risk for your organization.
+                Every feature, from authentication to messaging, is designed
+                with compliance at its core. This means fewer gaps, stronger
+                protections, and less risk for your organization.
               </p>
               <Link
                 href="/compliance"
@@ -488,22 +757,20 @@ export default function HomePage() {
             </motion.div>
 
             <div className="grid sm:grid-cols-2 gap-4">
-              {complianceFeatures.map((feature, index) => (
+              {complianceCards.map((card, index) => (
                 <motion.div
-                  key={feature.title}
+                  key={card.title}
                   className="p-6 rounded-xl bg-navy-800/50 border border-white/5"
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: index * 0.1 }}
                 >
-                  <feature.icon className="w-8 h-8 text-teal-400 mb-3" />
+                  <card.icon className="w-8 h-8 text-teal-400 mb-3" />
                   <h4 className="text-base font-semibold text-white mb-1.5">
-                    {feature.title}
+                    {card.title}
                   </h4>
-                  <p className="text-sm text-slate-400">
-                    {feature.description}
-                  </p>
+                  <p className="text-sm text-slate-400">{card.description}</p>
                 </motion.div>
               ))}
             </div>
@@ -511,114 +778,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Screenshot Gallery */}
-      <section className="py-24 lg:py-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            className="text-center max-w-2xl mx-auto mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-              See Recovery Journey in Action
-            </h2>
-            <p className="text-lg text-slate-400">
-              Real screenshots from the platform. Designed for clarity,
-              built for compliance.
-            </p>
-          </motion.div>
-
-          {/* Desktop screenshot */}
-          <motion.div
-            className="mb-16"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <BrowserFrame
-              src="/screenshots/journey-dashboard.png"
-              alt="Journey clinician dashboard with patient census, recent admissions, and facility-wide analytics"
-              className="mx-auto"
-            />
-            <p className="text-center text-sm text-slate-500 mt-4">
-              Journey clinician dashboard — real-time facility overview
-            </p>
-          </motion.div>
-
-          {/* Mobile screenshots row */}
-          <div className="flex flex-wrap justify-center items-end gap-6 lg:gap-10">
-            <motion.div
-              className="text-center"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              <div className="">
-                <PhoneFrame
-                  src="/screenshots/recover-home.png"
-                  alt="Recover home screen showing 46 days clean with daily wellness tracking"
-                />
-              </div>
-              <p className="text-sm text-slate-500 mt-4">Home</p>
-            </motion.div>
-
-            <motion.div
-              className="text-center"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <div className="">
-                <PhoneFrame
-                  src="/screenshots/recover-checkin.png"
-                  alt="Recover daily check-in modal for mood and craving tracking"
-                />
-              </div>
-              <p className="text-sm text-slate-500 mt-4">Daily Check-In</p>
-            </motion.div>
-
-            <motion.div
-              className="text-center"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-            >
-              <div className="">
-                <PhoneFrame
-                  src="/screenshots/recover-prevention.png"
-                  alt="Recover relapse prevention tools with coping strategies and emergency contacts"
-                />
-              </div>
-              <p className="text-sm text-slate-500 mt-4">Prevention Tools</p>
-            </motion.div>
-
-            <motion.div
-              className="text-center"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-            >
-              <div className="">
-                <PhoneFrame
-                  src="/screenshots/recover-journal.png"
-                  alt="Recover journal and cravings tracking tab"
-                />
-              </div>
-              <p className="text-sm text-slate-500 mt-4">Journal</p>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Preview */}
-      <section className="py-24 lg:py-32">
+      {/* ─── PRICING ─── */}
+      <section className="py-24 lg:py-32 bg-navy-950/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             className="text-center max-w-2xl mx-auto mb-16"
@@ -630,9 +791,12 @@ export default function HomePage() {
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
               Simple, Transparent Pricing
             </h2>
-            <p className="text-lg text-slate-400">
-              Plans for every stage of your practice. All plans include HIPAA
-              compliance and core security features.
+            <p className="text-lg text-slate-400 mb-3">
+              All plans include full HIPAA compliance, AI risk prediction, and
+              the patient companion app.
+            </p>
+            <p className="text-sm text-slate-500">
+              No hidden fees. No compliance add-ons. No per-patient charges.
             </p>
           </motion.div>
 
@@ -659,19 +823,53 @@ export default function HomePage() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.5 }}
           >
-            All plans include HIPAA compliance, 256-bit encryption, and audit
+            All plans include HIPAA compliance, AES-256 encryption, and audit
             logging.{' '}
-            <Link
-              href="/pricing"
-              className="text-teal-400 hover:underline"
-            >
+            <Link href="/pricing" className="text-teal-400 hover:underline">
               View full pricing details
             </Link>
           </motion.p>
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* ─── SOCIAL PROOF / TRUST ─── */}
+      <section className="py-24 lg:py-32">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            className="text-center max-w-2xl mx-auto mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              Built on Evidence, Tested Rigorously
+            </h2>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {trustPoints.map((point, index) => (
+              <motion.div
+                key={index}
+                className="flex flex-col items-center text-center p-6 rounded-2xl bg-navy-800/50 border border-white/5"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+              >
+                <div className="w-12 h-12 rounded-xl bg-teal-600/10 flex items-center justify-center mb-4">
+                  <point.icon className="w-6 h-6 text-teal-400" />
+                </div>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  {point.text}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── CTA ─── */}
       <section className="py-24 lg:py-32 bg-navy-950/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -682,32 +880,35 @@ export default function HomePage() {
             transition={{ duration: 0.5 }}
           >
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-              Ready to Transform Your Practice?
+              Ready to Predict and Prevent Relapse?
             </h2>
             <p className="text-lg text-slate-400 mb-8">
-              Join facilities that trust Recovery Journey to manage their
-              recovery programs with confidence and compliance.
+              Join facilities that trust RecoverJourney to keep patients engaged
+              and data secure.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
               <Link
                 href="/contact"
                 className="inline-flex items-center gap-2 px-8 py-3.5 text-base font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-500 transition-all hover:shadow-lg hover:shadow-teal-500/25"
               >
-                Schedule a Demo
+                Book a Consultation
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
-                href="/pricing"
+                href="/features"
                 className="inline-flex items-center gap-2 px-8 py-3.5 text-base font-semibold rounded-lg bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all"
               >
-                View Pricing
+                Explore the Platform
               </Link>
             </div>
+            <p className="text-sm text-slate-500">
+              Or call us: (XXX) XXX-XXXX
+            </p>
           </motion.div>
         </div>
       </section>
 
-      {/* FAQ Section */}
+      {/* ─── FAQ ─── */}
       <section className="py-24 lg:py-32">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div

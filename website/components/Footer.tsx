@@ -31,11 +31,11 @@ export function Footer() {
             <Link href="/" className="flex items-center gap-2.5 mb-4">
               <img
                 src="/logo.svg"
-                alt="Recovery Journey"
+                alt="RecoverJourney"
                 className="h-8 w-auto"
               />
               <span className="text-lg font-bold text-white tracking-tight">
-                Recovery<span className="text-teal-400">Journey</span>
+                Recover<span className="text-teal-400">Journey</span>
               </span>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed max-w-xs">
@@ -94,7 +94,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-slate-500">
-            &copy; {new Date().getFullYear()} Recovery Journey. All rights
+            &copy; {new Date().getFullYear()} RecoverJourney. All rights
             reserved.
           </p>
           <div className="flex items-center gap-6">
