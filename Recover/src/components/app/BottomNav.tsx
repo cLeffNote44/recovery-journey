@@ -1,7 +1,6 @@
-import { memo } from 'react';
-import { Home, Calendar, BookOpen, Users, Shield, Settings, Heart, Building2 } from "lucide-react";
+import { memo, useRef, useEffect } from 'react';
+import { Home, Calendar, BookOpen, Shield, Settings, Heart, Building2 } from "lucide-react";
 import { useFacilityStore } from '@/stores/useFacilityStore';
-import { Badge } from '@/components/ui/badge';
 
 interface BottomNavProps {
   activeTab: string;
@@ -21,11 +20,42 @@ const tabs = [
 export const BottomNav = memo(function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const unreadMessageCount = useFacilityStore((state) => state.unreadMessageCount);
   const isConnected = useFacilityStore((state) => state.isConnected);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const activeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Auto-scroll active tab into view
+  useEffect(() => {
+    if (activeButtonRef.current && scrollRef.current) {
+      const container = scrollRef.current;
+      const button = activeButtonRef.current;
+      const containerRect = container.getBoundingClientRect();
+      const buttonRect = button.getBoundingClientRect();
+
+      // Center the active tab in the visible area
+      const scrollLeft = button.offsetLeft - (containerRect.width / 2) + (buttonRect.width / 2);
+      container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+    }
+  }, [activeTab]);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 pb-safe" role="navigation" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)' }}>
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex justify-around items-center h-16" role="tablist">
+    <div
+      className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50"
+      role="navigation"
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)' }}
+    >
+      <div
+        ref={scrollRef}
+        className="overflow-x-auto [&::-webkit-scrollbar]:hidden"
+        style={{
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        <div
+          className="flex items-center h-16 min-w-max px-2"
+          role="tablist"
+        >
           {tabs.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -34,12 +64,13 @@ export const BottomNav = memo(function BottomNav({ activeTab, onTabChange }: Bot
             return (
               <button
                 key={tab.id}
+                ref={isActive ? activeButtonRef : undefined}
                 onClick={() => onTabChange(tab.id)}
                 role="tab"
                 aria-selected={isActive}
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={`${tab.label} tab${isActive ? ' - currently selected' : ''}${showBadge ? `, ${unreadMessageCount} unread messages` : ''}`}
-                className={`flex flex-col items-center justify-center flex-1 h-full transition-colors relative ${
+                className={`flex flex-col items-center justify-center px-4 h-full transition-colors relative shrink-0 ${
                   isActive
                     ? 'text-primary'
                     : 'text-muted-foreground hover:text-foreground'
@@ -47,7 +78,7 @@ export const BottomNav = memo(function BottomNav({ activeTab, onTabChange }: Bot
               >
                 <div className="relative">
                   <Icon
-                    className={`w-6 h-6 mb-1 ${isActive ? 'fill-current' : ''} ${
+                    className={`w-5 h-5 mb-0.5 ${isActive ? 'fill-current' : ''} ${
                       tab.id === 'facility' && isConnected ? 'text-green-500' : ''
                     }`}
                     aria-hidden="true"
@@ -58,7 +89,12 @@ export const BottomNav = memo(function BottomNav({ activeTab, onTabChange }: Bot
                     </span>
                   )}
                 </div>
-                <span className="text-xs font-medium">{tab.label}</span>
+                <span className={`text-[11px] font-medium ${isActive ? 'font-semibold' : ''}`}>
+                  {tab.label}
+                </span>
+                {isActive && (
+                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+                )}
               </button>
             );
           })}
@@ -67,4 +103,3 @@ export const BottomNav = memo(function BottomNav({ activeTab, onTabChange }: Bot
     </div>
   );
 });
-
