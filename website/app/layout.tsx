@@ -33,12 +33,16 @@ export const metadata: Metadata = {
     siteName: 'Recovery Journey',
     type: 'website',
     locale: 'en_US',
+    images: [{ url: '/og-image.svg' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Recovery Journey | HIPAA-Compliant Recovery Management',
     description:
       'Streamline recovery management with our HIPAA & 42 CFR Part 2 compliant platform.',
+  },
+  icons: {
+    icon: '/favicon.svg',
   },
   robots: {
     index: true,

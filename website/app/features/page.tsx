@@ -27,6 +27,8 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { FeatureCard } from '@/components/FeatureCard';
+import { BrowserFrame } from '@/components/BrowserFrame';
+import { PhoneFrame } from '@/components/PhoneFrame';
 
 const journeyFeatures = [
   {
@@ -208,6 +210,40 @@ export default function FeaturesPage() {
               />
             ))}
           </div>
+
+          {/* Journey Screenshots */}
+          <div className="mt-16 grid md:grid-cols-2 gap-8 items-start">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <BrowserFrame
+                src="/screenshots/journey-dashboard.png"
+                alt="Journey clinician dashboard showing patient census, admissions, and analytics"
+                className="mx-auto"
+              />
+              <p className="text-center text-sm text-slate-500 mt-3">
+                Facility dashboard with real-time metrics
+              </p>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+            >
+              <BrowserFrame
+                src="/screenshots/journey-login.png"
+                alt="Journey secure login page with HIPAA-compliant authentication"
+                className="mx-auto"
+              />
+              <p className="text-center text-sm text-slate-500 mt-3">
+                Secure, HIPAA-compliant authentication
+              </p>
+            </motion.div>
+          </div>
         </div>
       </section>
 
@@ -244,6 +280,57 @@ export default function FeaturesPage() {
                 delay={index * 0.1}
               />
             ))}
+          </div>
+
+          {/* Recover Screenshots */}
+          <div className="mt-16 flex flex-wrap justify-center items-end gap-8 lg:gap-12">
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="transform -rotate-2 hover:rotate-0 transition-transform duration-300">
+                <PhoneFrame
+                  src="/screenshots/recover-home.png"
+                  alt="Recover home screen showing 46 days clean with wellness tracking"
+                />
+              </div>
+              <p className="text-sm text-slate-500 mt-4">Home Screen</p>
+            </motion.div>
+
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <div className="transform rotate-1 hover:rotate-0 transition-transform duration-300">
+                <PhoneFrame
+                  src="/screenshots/recover-checkin.png"
+                  alt="Recover daily check-in modal for mood and craving tracking"
+                />
+              </div>
+              <p className="text-sm text-slate-500 mt-4">Daily Check-In</p>
+            </motion.div>
+
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="transform -rotate-1 hover:rotate-0 transition-transform duration-300">
+                <PhoneFrame
+                  src="/screenshots/recover-prevention.png"
+                  alt="Recover relapse prevention tools with coping strategies"
+                />
+              </div>
+              <p className="text-sm text-slate-500 mt-4">Prevention Tools</p>
+            </motion.div>
           </div>
         </div>
       </section>

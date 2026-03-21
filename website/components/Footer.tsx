@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Shield } from 'lucide-react';
+
 
 const footerLinks = {
   Product: [
@@ -27,9 +27,11 @@ export function Footer() {
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2.5 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
-                <Shield className="w-4 h-4 text-white" />
-              </div>
+              <img
+                src="/logo.svg"
+                alt="Recovery Journey"
+                className="h-8 w-auto"
+              />
               <span className="text-lg font-bold text-white tracking-tight">
                 Recovery<span className="text-teal-400">Journey</span>
               </span>

@@ -22,11 +22,14 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
+import Image from 'next/image';
 import { Hero } from '@/components/Hero';
 import { FeatureCard } from '@/components/FeatureCard';
 import { PricingCard } from '@/components/PricingCard';
 import { ComplianceBadge } from '@/components/ComplianceBadge';
 import { FAQ } from '@/components/FAQ';
+import { BrowserFrame } from '@/components/BrowserFrame';
+import { PhoneFrame } from '@/components/PhoneFrame';
 
 const trustBadges = [
   { icon: ShieldCheck, title: 'HIPAA Compliant', description: 'Full Privacy & Security Rule adherence' },
@@ -377,31 +380,13 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Mock UI */}
-              <div className="rounded-xl bg-navy-900 border border-white/5 p-4 mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-3 h-3 rounded-full bg-red-500/60" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-                  <div className="w-3 h-3 rounded-full bg-green-500/60" />
-                  <div className="flex-1 mx-4 h-6 rounded bg-navy-800" />
-                </div>
-                <div className="grid grid-cols-4 gap-3">
-                  <div className="col-span-1 space-y-2">
-                    <div className="h-4 rounded bg-navy-800 w-full" />
-                    <div className="h-4 rounded bg-teal-600/20 w-full" />
-                    <div className="h-4 rounded bg-navy-800 w-full" />
-                    <div className="h-4 rounded bg-navy-800 w-full" />
-                  </div>
-                  <div className="col-span-3 space-y-2">
-                    <div className="h-8 rounded bg-navy-800 w-2/3" />
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="h-16 rounded bg-navy-800" />
-                      <div className="h-16 rounded bg-navy-800" />
-                      <div className="h-16 rounded bg-navy-800" />
-                    </div>
-                    <div className="h-20 rounded bg-navy-800" />
-                  </div>
-                </div>
+              {/* Dashboard Screenshot */}
+              <div className="mb-6">
+                <BrowserFrame
+                  src="/screenshots/journey-dashboard.png"
+                  alt="Journey clinician dashboard showing patient census, admissions, and facility analytics"
+                  className="mx-auto"
+                />
               </div>
 
               <ul className="space-y-2.5">
@@ -439,22 +424,13 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Mock Phone UI */}
+              {/* Home Screen Screenshot */}
               <div className="flex justify-center mb-6">
-                <div className="w-48 rounded-2xl bg-navy-900 border border-white/5 p-3">
-                  <div className="w-16 h-1 rounded-full bg-navy-700 mx-auto mb-3" />
-                  <div className="space-y-2">
-                    <div className="h-6 rounded bg-navy-800 w-2/3" />
-                    <div className="h-3 rounded bg-navy-800 w-full" />
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <div className="h-12 rounded bg-teal-600/10 border border-teal-600/20" />
-                      <div className="h-12 rounded bg-navy-800" />
-                    </div>
-                    <div className="h-16 rounded bg-navy-800" />
-                    <div className="h-4 rounded bg-navy-800 w-3/4" />
-                    <div className="h-10 rounded bg-teal-600/20 border border-teal-600/20" />
-                  </div>
-                  <div className="w-12 h-1 rounded-full bg-navy-700 mx-auto mt-3" />
+                <div className="transform rotate-1 hover:rotate-0 transition-transform duration-300">
+                  <PhoneFrame
+                    src="/screenshots/recover-home.png"
+                    alt="Recover patient app home screen showing 46 days clean and daily wellness tracking"
+                  />
                 </div>
               </div>
 
@@ -531,6 +507,112 @@ export default function HomePage() {
                 </motion.div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Screenshot Gallery */}
+      <section className="py-24 lg:py-32">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            className="text-center max-w-2xl mx-auto mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              See Recovery Journey in Action
+            </h2>
+            <p className="text-lg text-slate-400">
+              Real screenshots from the platform. Designed for clarity,
+              built for compliance.
+            </p>
+          </motion.div>
+
+          {/* Desktop screenshot */}
+          <motion.div
+            className="mb-16"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <BrowserFrame
+              src="/screenshots/journey-dashboard.png"
+              alt="Journey clinician dashboard with patient census, recent admissions, and facility-wide analytics"
+              className="mx-auto"
+            />
+            <p className="text-center text-sm text-slate-500 mt-4">
+              Journey clinician dashboard — real-time facility overview
+            </p>
+          </motion.div>
+
+          {/* Mobile screenshots row */}
+          <div className="flex flex-wrap justify-center items-end gap-6 lg:gap-10">
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <div className="transform -rotate-2 hover:rotate-0 transition-transform duration-300">
+                <PhoneFrame
+                  src="/screenshots/recover-home.png"
+                  alt="Recover home screen showing 46 days clean with daily wellness tracking"
+                />
+              </div>
+              <p className="text-sm text-slate-500 mt-4">Home</p>
+            </motion.div>
+
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="transform rotate-1 hover:rotate-0 transition-transform duration-300">
+                <PhoneFrame
+                  src="/screenshots/recover-checkin.png"
+                  alt="Recover daily check-in modal for mood and craving tracking"
+                />
+              </div>
+              <p className="text-sm text-slate-500 mt-4">Daily Check-In</p>
+            </motion.div>
+
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <div className="transform -rotate-1 hover:rotate-0 transition-transform duration-300">
+                <PhoneFrame
+                  src="/screenshots/recover-prevention.png"
+                  alt="Recover relapse prevention tools with coping strategies and emergency contacts"
+                />
+              </div>
+              <p className="text-sm text-slate-500 mt-4">Prevention Tools</p>
+            </motion.div>
+
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <div className="transform rotate-2 hover:rotate-0 transition-transform duration-300">
+                <PhoneFrame
+                  src="/screenshots/recover-journal.png"
+                  alt="Recover journal and cravings tracking tab"
+                />
+              </div>
+              <p className="text-sm text-slate-500 mt-4">Journal</p>
+            </motion.div>
           </div>
         </div>
       </section>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, Shield } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 const navLinks = [
   { href: '/features', label: 'Features' },
@@ -20,10 +20,12 @@ export function Header() {
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-lg bg-teal-600 flex items-center justify-center group-hover:bg-teal-500 transition-colors">
-              <Shield className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-lg font-bold text-white tracking-tight">
+            <img
+              src="/logo.svg"
+              alt="Recovery Journey"
+              className="h-8 w-auto"
+            />
+            <span className="hidden sm:inline text-lg font-bold text-white tracking-tight">
               Recovery<span className="text-teal-400">Journey</span>
             </span>
           </Link>
