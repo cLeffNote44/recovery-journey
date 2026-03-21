@@ -5,6 +5,16 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-03-21
+
+### Removed
+- Features page (/features) — redundant with /journey-portal, /recover-app, and /compliance pages
+- "Features" link removed from header nav and footer
+
+### Changed
+- Navigation simplified to: Patient App | Clinician Portal | Pricing | Compliance | Contact
+- All former /features links redirected to /recover-app
+
 ## [1.5.0] - 2026-03-21
 
 ### Added

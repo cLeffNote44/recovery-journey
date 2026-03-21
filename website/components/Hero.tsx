@@ -68,7 +68,7 @@ export function Hero() {
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
-              href="/features"
+              href="/recover-app"
               className="inline-flex items-center gap-2 px-8 py-3.5 text-base font-semibold rounded-lg bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all"
             >
               <Play className="w-4 h-4" />
