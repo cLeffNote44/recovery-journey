@@ -1,0 +1,46 @@
+{
+  "name": "recovery-journey",
+  "version": "1.0.0",
+  "description": "HIPAA-compliant substance abuse recovery management platform",
+  "private": true,
+  "workspaces": [
+    "Backend",
+    "Journey",
+    "Recover"
+  ],
+  "scripts": {
+    "prepare": "husky install",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "dev:backend": "npm run dev --workspace=Backend",
+    "dev:journey": "npm run dev --workspace=Journey",
+    "dev:recover": "npm run dev --workspace=Recover",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "deploy:staging": "./scripts/deploy.sh staging",
+    "deploy:production": "./scripts/deploy.sh production",
+    "rollback:staging": "./scripts/rollback.sh staging",
+    "rollback:production": "./scripts/rollback.sh production"
+  },
+  "devDependencies": {
+    "husky": "^9.0.11"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "keywords": [
+    "healthcare",
+    "hipaa",
+    "42-cfr-part-2",
+    "substance-abuse",
+    "recovery",
+    "patient-management",
+    "treatment-plans",
+    "clinical-software"
+  ],
+  "author": "Recovery Journey <contact@recoveryjourney.co>",
+  "license": "SEE LICENSE IN LICENSE"
+}

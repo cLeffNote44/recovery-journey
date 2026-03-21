@@ -1,0 +1,82 @@
+# =============================================================================
+# Recovery Journey - Production Docker Compose Override
+# =============================================================================
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# This override:
+#   - Uses production build targets
+#   - Removes volume mounts (uses built code)
+#   - Adds resource limits
+#   - Configures for production environment
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database (Production)
+  # ---------------------------------------------------------------------------
+  db:
+    restart: always
+    environment:
+      # These MUST be set via environment variables or .env file
+      POSTGRES_USER: ${DB_USER:?DB_USER is required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: ${DB_NAME:-recovery_journey}
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    # Don't expose port in production (internal only)
+    ports: []
+
+  # ---------------------------------------------------------------------------
+  # Backend API Server (Production)
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./Backend
+      target: production
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 8000
+      HOST: 0.0.0.0
+      # These MUST be set via environment variables or .env file
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      AUDIT_LOG_RETENTION_DAYS: 2555
+    # Remove volume mounts in production
+    volumes: []
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      replicas: 1
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  # Migrations (Production)
+  # ---------------------------------------------------------------------------
+  migrate:
+    build:
+      context: ./Backend
+      target: production
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}

@@ -1,0 +1,190 @@
+# =============================================================================
+# Recovery Journey - Docker Compose Configuration
+# =============================================================================
+# This file orchestrates all services for the Recovery Journey platform:
+#   - PostgreSQL database
+#   - Backend API server
+#   - Journey (Staff Portal) - Electron app served via Vite for dev
+#   - Recover (Patient App) - Capacitor app served via Vite for dev
+#
+# Usage:
+#   Development:  docker-compose up -d
+#   Production:   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   Stop:         docker-compose down
+#   Reset DB:     docker-compose down -v && docker-compose up -d
+#
+# SECURITY NOTE (HIPAA):
+#   Default passwords and JWT secrets below are for LOCAL DEVELOPMENT ONLY.
+#   For staging/production, ALL secrets MUST be set via environment variables
+#   or a .env file and MUST NOT use these defaults.
+#   Required overrides: DB_PASSWORD, JWT_SECRET, JWT_REFRESH_SECRET
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: recovery-journey-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}  # OVERRIDE in staging/production!
+      POSTGRES_DB: ${DB_NAME:-recovery_journey}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./Backend/scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-recovery_journey}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - recovery-network
+
+  # ---------------------------------------------------------------------------
+  # Backend API Server
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./Backend
+      target: development
+    container_name: recovery-journey-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 8000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-recovery_journey}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-in-production-min-32-chars}  # OVERRIDE in staging/production!
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-change-in-production}  # OVERRIDE in staging/production!
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      CORS_ORIGINS: http://localhost:5173,http://localhost:5174,http://localhost:3000
+      RATE_LIMIT_MAX: 100
+      RATE_LIMIT_WINDOW_MS: 60000
+      AUDIT_LOG_RETENTION_DAYS: 2555
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      # Mount source for hot-reload in development
+      - ./Backend/src:/app/src:ro
+      - ./Backend/prisma:/app/prisma:ro
+      # Prevent overwriting node_modules
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - recovery-network
+
+  # ---------------------------------------------------------------------------
+  # Database Migrations (run once)
+  # ---------------------------------------------------------------------------
+  migrate:
+    build:
+      context: ./Backend
+      target: deps
+    container_name: recovery-journey-migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-recovery_journey}?schema=public
+    command: npx prisma migrate deploy
+    networks:
+      - recovery-network
+    profiles:
+      - migrate
+
+  # ---------------------------------------------------------------------------
+  # Database Seeder (run once, optional)
+  # ---------------------------------------------------------------------------
+  seed:
+    build:
+      context: ./Backend
+      target: deps
+    container_name: recovery-journey-seed
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-recovery_journey}?schema=public
+    command: npx prisma db seed
+    networks:
+      - recovery-network
+    profiles:
+      - seed
+
+  # ---------------------------------------------------------------------------
+  # Journey - Staff Portal (Development)
+  # ---------------------------------------------------------------------------
+  journey:
+    build:
+      context: ./Journey
+      target: development
+    container_name: recovery-journey-portal
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:8000/api/v1
+      VITE_WS_URL: ws://localhost:8000/ws
+    ports:
+      - "${JOURNEY_PORT:-5173}:5173"
+    volumes:
+      - ./Journey/src:/app/src:ro
+      - ./Journey/index.html:/app/index.html:ro
+      - /app/node_modules
+    networks:
+      - recovery-network
+    profiles:
+      - frontend
+
+  # ---------------------------------------------------------------------------
+  # Recover - Patient App (Development)
+  # ---------------------------------------------------------------------------
+  recover:
+    build:
+      context: ./Recover
+      dockerfile: Dockerfile
+    container_name: recovery-journey-patient-app
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_FACILITY_API_URL: http://localhost:8000/api/v1
+    ports:
+      - "${RECOVER_PORT:-5174}:5173"
+    volumes:
+      - ./Recover/src:/app/src:ro
+      - ./Recover/index.html:/app/index.html:ro
+      - /app/node_modules
+    networks:
+      - recovery-network
+    profiles:
+      - frontend
+
+# -----------------------------------------------------------------------------
+# Networks
+# -----------------------------------------------------------------------------
+networks:
+  recovery-network:
+    driver: bridge
+
+# -----------------------------------------------------------------------------
+# Volumes
+# -----------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    driver: local

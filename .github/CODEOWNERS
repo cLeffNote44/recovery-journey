@@ -1,0 +1,28 @@
+# Recovery Journey Code Owners
+# These owners will be requested for review when changes are made to matching files.
+
+# Default owners for everything
+* @your-org/leads
+
+# Backend
+/Backend/ @your-org/backend-team
+/Backend/prisma/ @your-org/backend-team @your-org/database-team
+/Backend/src/middleware/auth.ts @your-org/security-team
+/Backend/src/lib/sanitize.ts @your-org/security-team
+
+# Journey (Staff Desktop App)
+/Journey/ @your-org/frontend-team
+
+# Recover (Patient Mobile App)
+/Recover/ @your-org/mobile-team
+
+# Infrastructure
+/docker-compose*.yml @your-org/devops-team
+/.github/ @your-org/devops-team
+/scripts/ @your-org/devops-team
+/deploy/ @your-org/devops-team
+
+# Security-sensitive files
+**/.env* @your-org/security-team
+**/auth* @your-org/security-team
+**/security* @your-org/security-team

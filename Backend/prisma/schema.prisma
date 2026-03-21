@@ -1,0 +1,657 @@
+// Recovery Journey Database Schema
+// HIPAA & 42 CFR Part 2 Compliant
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// FACILITY & ORGANIZATION
+// ============================================
+
+model Facility {
+  id            String   @id @default(cuid())
+  name          String
+  address       String
+  city          String
+  state         String
+  zip           String
+  phone         String
+  email         String
+  licenseNumber String?  @map("license_number")
+
+  status        FacilityStatus @default(ACTIVE)
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  staff         Staff[]
+  patients      Patient[]
+  treatmentPlans TreatmentPlan[]
+
+  @@map("facilities")
+}
+
+enum FacilityStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+// ============================================
+// STAFF & AUTHENTICATION
+// ============================================
+
+model Staff {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  firstName     String    @map("first_name")
+  lastName      String    @map("last_name")
+  role          StaffRole
+  phone         String?
+
+  status        StaffStatus @default(ACTIVE)
+
+  // Facility assignment (null for super_admin)
+  facilityId    String?   @map("facility_id")
+  facility      Facility? @relation(fields: [facilityId], references: [id])
+
+  // Security
+  lastLoginAt   DateTime? @map("last_login_at")
+  failedLoginAttempts Int @default(0) @map("failed_login_attempts")
+  lockedUntil   DateTime? @map("locked_until")
+
+  // Two-Factor Authentication
+  twoFactorSecret   String?   @map("two_factor_secret")
+  twoFactorEnabled  Boolean   @default(false) @map("two_factor_enabled")
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  assignedPatients Patient[] @relation("AssignedCounselor")
+  sentMessages     Message[] @relation("StaffMessages")
+  auditLogs        AuditLog[]
+  refreshTokens    RefreshToken[]
+
+  @@map("staff")
+}
+
+enum StaffRole {
+  SUPER_ADMIN
+  FACILITY_ADMIN
+  COUNSELOR
+}
+
+enum StaffStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model RefreshToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  staffId     String   @map("staff_id")
+  staff       Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  revokedAt   DateTime? @map("revoked_at")
+
+  @@index([staffId])
+  @@map("refresh_tokens")
+}
+
+// ============================================
+// PATIENT & REGISTRATION
+// ============================================
+
+model Patient {
+  id                  String   @id @default(cuid())
+
+  // Demographics
+  firstName           String   @map("first_name")
+  lastName            String   @map("last_name")
+  dateOfBirth         DateTime @map("date_of_birth")
+  phone               String?
+  email               String?
+
+  // Recovery Info
+  admissionDate       DateTime @map("admission_date")
+  sobrietyDate        DateTime @map("sobriety_date")
+  substancesOfChoice  String[] @map("substances_of_choice")
+
+  // Emergency Contact
+  emergencyContactName         String? @map("emergency_contact_name")
+  emergencyContactPhone        String? @map("emergency_contact_phone")
+  emergencyContactRelationship String? @map("emergency_contact_relationship")
+
+  // Status
+  status              PatientStatus @default(PENDING)
+  dischargeDate       DateTime?     @map("discharge_date")
+  dischargeReason     String?       @map("discharge_reason")
+
+  // Facility & Staff Assignment
+  facilityId          String   @map("facility_id")
+  facility            Facility @relation(fields: [facilityId], references: [id])
+
+  assignedCounselorId String?  @map("assigned_counselor_id")
+  assignedCounselor   Staff?   @relation("AssignedCounselor", fields: [assignedCounselorId], references: [id])
+
+  // App Access
+  registrationKey     RegistrationKey?
+  deviceBindings      PatientDevice[]
+
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  checkIns            CheckIn[]
+  cravings            Craving[]
+  messages            Message[] @relation("PatientMessages")
+  treatmentAssignment TreatmentAssignment?
+  consents            Consent[]
+  goals               PatientGoal[]
+
+  @@index([facilityId])
+  @@index([assignedCounselorId])
+  @@map("patients")
+}
+
+enum PatientStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  DISCHARGED
+}
+
+model RegistrationKey {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  patientId   String   @unique @map("patient_id")
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  expiresAt   DateTime @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdById String   @map("created_by_id")
+
+  @@map("registration_keys")
+}
+
+model PatientDevice {
+  id          String   @id @default(cuid())
+  patientId   String   @map("patient_id")
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  deviceId    String   @map("device_id")
+  deviceName  String?  @map("device_name")
+  platform    String   // ios, android, web
+
+  // Authentication
+  tokenHash   String?  @map("token_hash")
+  lastActiveAt DateTime? @map("last_active_at")
+
+  isActive    Boolean  @default(true) @map("is_active")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([patientId, deviceId])
+  @@map("patient_devices")
+}
+
+// ============================================
+// CHECK-INS & RECOVERY DATA
+// ============================================
+
+model CheckIn {
+  id          String   @id @default(cuid())
+  patientId   String   @map("patient_id")
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  date        DateTime
+  mood        Int      // 1-10 scale
+  notes       String?
+
+  // HALT Assessment
+  haltHungry  Int?     @map("halt_hungry")  // 1-10
+  haltAngry   Int?     @map("halt_angry")   // 1-10
+  haltLonely  Int?     @map("halt_lonely")  // 1-10
+  haltTired   Int?     @map("halt_tired")   // 1-10
+
+  // Wellness Data (optional sync from Recover)
+  hoursSlept  Float?   @map("hours_slept")
+  sleepQuality Int?    @map("sleep_quality") // 1-10
+  exerciseMinutes Int? @map("exercise_minutes")
+
+  // Calculated fields
+  wellnessScore Int?   @map("wellness_score") // Computed average
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([patientId, date])
+  @@map("check_ins")
+}
+
+model Craving {
+  id              String   @id @default(cuid())
+  patientId       String   @map("patient_id")
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  date            DateTime
+  intensity       Int      // 1-10 scale
+  trigger         String?
+  triggerNotes    String?  @map("trigger_notes")
+  copingStrategy  String?  @map("coping_strategy")
+  overcame        Boolean  @default(false)
+
+  // HALT at time of craving
+  haltHungry      Int?     @map("halt_hungry")
+  haltAngry       Int?     @map("halt_angry")
+  haltLonely      Int?     @map("halt_lonely")
+  haltTired       Int?     @map("halt_tired")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([patientId, date])
+  @@map("cravings")
+}
+
+// ============================================
+// MESSAGING
+// ============================================
+
+model Message {
+  id              String   @id @default(cuid())
+
+  // Conversation participants
+  patientId       String   @map("patient_id")
+  patient         Patient  @relation("PatientMessages", fields: [patientId], references: [id], onDelete: Cascade)
+
+  staffId         String   @map("staff_id")
+  staff           Staff    @relation("StaffMessages", fields: [staffId], references: [id])
+
+  // Message content
+  senderType      SenderType @map("sender_type")
+  content         String
+  messageType     MessageType @default(TEXT) @map("message_type")
+  priority        MessagePriority @default(NORMAL)
+
+  // Status
+  readAt          DateTime? @map("read_at")
+
+  // Encryption metadata (for end-to-end encryption)
+  encrypted       Boolean   @default(false)
+  encryptionKeyId String?   @map("encryption_key_id")
+
+  sentAt          DateTime  @default(now()) @map("sent_at")
+
+  @@index([patientId, staffId])
+  @@index([patientId, sentAt])
+  @@map("messages")
+}
+
+enum SenderType {
+  PATIENT
+  STAFF
+  SYSTEM
+}
+
+enum MessageType {
+  TEXT
+  SYSTEM
+  ALERT
+}
+
+enum MessagePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// ============================================
+// TREATMENT PLANS
+// ============================================
+
+model TreatmentPlan {
+  id            String   @id @default(cuid())
+  facilityId    String   @map("facility_id")
+  facility      Facility @relation(fields: [facilityId], references: [id])
+
+  name          String
+  description   String?
+  duration      Int      // Number of units
+  durationUnit  DurationUnit @map("duration_unit")
+
+  status        TreatmentPlanStatus @default(DRAFT)
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdById   String   @map("created_by_id")
+
+  // Relations
+  phases        TreatmentPhase[]
+  assignments   TreatmentAssignment[]
+
+  @@index([facilityId])
+  @@map("treatment_plans")
+}
+
+enum TreatmentPlanStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum DurationUnit {
+  DAYS
+  WEEKS
+  MONTHS
+}
+
+model TreatmentPhase {
+  id              String        @id @default(cuid())
+  treatmentPlanId String        @map("treatment_plan_id")
+  treatmentPlan   TreatmentPlan @relation(fields: [treatmentPlanId], references: [id], onDelete: Cascade)
+
+  name            String
+  description     String?
+  duration        Int
+  durationUnit    DurationUnit  @map("duration_unit")
+  orderIndex      Int           @map("order_index")
+
+  goals           String[]
+  activities      String[]
+
+  @@index([treatmentPlanId])
+  @@map("treatment_phases")
+}
+
+model TreatmentAssignment {
+  id              String        @id @default(cuid())
+
+  patientId       String        @unique @map("patient_id")
+  patient         Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  treatmentPlanId String        @map("treatment_plan_id")
+  treatmentPlan   TreatmentPlan @relation(fields: [treatmentPlanId], references: [id])
+
+  startDate       DateTime      @map("start_date")
+  currentPhaseIndex Int         @default(0) @map("current_phase_index")
+
+  status          AssignmentStatus @default(ACTIVE)
+  completedAt     DateTime?     @map("completed_at")
+
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  @@map("treatment_assignments")
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  DISCONTINUED
+}
+
+// ============================================
+// PATIENT GOALS (synced from Recover app)
+// ============================================
+
+model PatientGoal {
+  id          String   @id @default(cuid())
+  patientId   String   @map("patient_id")
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  category    GoalCategory
+
+  targetType  GoalTargetType @map("target_type")
+  targetValue Int?           @map("target_value")
+  currentValue Int           @default(0) @map("current_value")
+
+  frequency   GoalFrequency
+  startDate   DateTime       @map("start_date")
+  endDate     DateTime?      @map("end_date")
+
+  isActive    Boolean        @default(true) @map("is_active")
+  isCompleted Boolean        @default(false) @map("is_completed")
+  completedAt DateTime?      @map("completed_at")
+
+  // Sync from Recover
+  recoverGoalId String?      @unique @map("recover_goal_id")
+  lastSyncedAt  DateTime?    @map("last_synced_at")
+
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@map("patient_goals")
+}
+
+enum GoalCategory {
+  RECOVERY
+  WELLNESS
+  PERSONAL
+  SOCIAL
+}
+
+enum GoalTargetType {
+  NUMERICAL
+  YES_NO
+  STREAK
+}
+
+enum GoalFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  ONE_TIME
+}
+
+// ============================================
+// 42 CFR PART 2 - CONSENT TRACKING
+// ============================================
+
+model Consent {
+  id          String   @id @default(cuid())
+  patientId   String   @map("patient_id")
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  // What is being consented to
+  consentType ConsentType @map("consent_type")
+  purpose     String      // Description of why disclosure is needed
+
+  // Who can receive the information
+  recipientName        String  @map("recipient_name")
+  recipientOrganization String? @map("recipient_organization")
+
+  // What information can be shared
+  informationToDisclose String[] @map("information_to_disclose")
+
+  // Validity
+  effectiveDate DateTime @map("effective_date")
+  expirationDate DateTime @map("expiration_date")
+
+  // Status
+  status        ConsentStatus @default(ACTIVE)
+  revokedAt     DateTime?     @map("revoked_at")
+  revokedReason String?       @map("revoked_reason")
+
+  // Signatures (could be electronic)
+  patientSignature   String?   @map("patient_signature")
+  patientSignedAt    DateTime? @map("patient_signed_at")
+  witnessName        String?   @map("witness_name")
+  witnessSignedAt    DateTime? @map("witness_signed_at")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdById   String   @map("created_by_id")
+
+  @@index([patientId])
+  @@map("consents")
+}
+
+enum ConsentType {
+  TREATMENT_COORDINATION
+  FAMILY_INVOLVEMENT
+  EMPLOYER_NOTIFICATION
+  LEGAL_PROCEEDINGS
+  INSURANCE_BILLING
+  RESEARCH
+  OTHER
+}
+
+enum ConsentStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+// ============================================
+// HIPAA AUDIT LOG
+// ============================================
+
+model AuditLog {
+  id            String   @id @default(cuid())
+
+  // Who performed the action
+  staffId       String?  @map("staff_id")
+  staff         Staff?   @relation(fields: [staffId], references: [id])
+  patientActorId String? @map("patient_actor_id") // If patient performed action
+
+  // What action was performed
+  action        AuditAction
+  resourceType  String   @map("resource_type")  // e.g., "patient", "message", "check_in"
+  resourceId    String?  @map("resource_id")
+
+  // Details
+  description   String?
+  phiAccessed   String[] @map("phi_accessed")   // Which PHI fields were accessed
+
+  // Request context
+  ipAddress     String?  @map("ip_address")
+  userAgent     String?  @map("user_agent")
+  sessionId     String?  @map("session_id")
+
+  // Outcome
+  success       Boolean  @default(true)
+  errorMessage  String?  @map("error_message")
+
+  timestamp     DateTime @default(now())
+
+  @@index([staffId])
+  @@index([resourceType, resourceId])
+  @@index([timestamp])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+enum AuditAction {
+  // Authentication
+  LOGIN
+  LOGOUT
+  LOGIN_FAILED
+  TOKEN_REFRESH
+
+  // Patient records
+  PATIENT_VIEW
+  PATIENT_CREATE
+  PATIENT_UPDATE
+  PATIENT_DELETE
+  PATIENT_SEARCH
+
+  // Check-ins
+  CHECKIN_VIEW
+  CHECKIN_CREATE
+  CHECKIN_SYNC
+
+  // Messages
+  MESSAGE_VIEW
+  MESSAGE_SEND
+  MESSAGE_READ
+
+  // Treatment plans
+  TREATMENT_VIEW
+  TREATMENT_CREATE
+  TREATMENT_UPDATE
+  TREATMENT_ASSIGN
+
+  // Consent
+  CONSENT_VIEW
+  CONSENT_CREATE
+  CONSENT_REVOKE
+
+  // Data export
+  DATA_EXPORT
+  REPORT_GENERATE
+
+  // Admin actions
+  STAFF_CREATE
+  STAFF_UPDATE
+  STAFF_DEACTIVATE
+  FACILITY_CREATE
+  FACILITY_UPDATE
+}
+
+// ============================================
+// APPOINTMENTS (Future expansion)
+// ============================================
+
+model Appointment {
+  id          String   @id @default(cuid())
+  patientId   String   @map("patient_id")
+  staffId     String   @map("staff_id")
+  facilityId  String   @map("facility_id")
+
+  title       String
+  description String?
+  type        AppointmentType
+
+  startTime   DateTime @map("start_time")
+  endTime     DateTime @map("end_time")
+
+  status      AppointmentStatus @default(SCHEDULED)
+
+  // Reminders
+  reminderSent Boolean @default(false) @map("reminder_sent")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@index([staffId])
+  @@index([startTime])
+  @@map("appointments")
+}
+
+enum AppointmentType {
+  THERAPY_SESSION
+  GROUP_SESSION
+  MEDICAL_REVIEW
+  INTAKE
+  DISCHARGE_PLANNING
+  FAMILY_SESSION
+  OTHER
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}

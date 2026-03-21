@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="jdi-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="jdi-mark" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0d9488"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <linearGradient id="jdi-glow" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0d9488" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="jdi-clip">
+      <rect x="16" y="16" width="480" height="480" rx="96" ry="96"/>
+    </clipPath>
+  </defs>
+  <!-- Rounded rectangle background -->
+  <rect x="16" y="16" width="480" height="480" rx="96" ry="96" fill="url(#jdi-bg)"/>
+  <!-- Subtle radial glow behind the mark -->
+  <ellipse cx="256" cy="220" rx="200" ry="180" fill="url(#jdi-glow)" clip-path="url(#jdi-clip)"/>
+  <!-- Desktop/monitor element — subtle bottom border -->
+  <g opacity="0.2">
+    <rect x="120" y="360" width="272" height="6" rx="3" fill="#0d9488"/>
+    <rect x="232" y="366" width="48" height="24" rx="4" fill="#0d9488"/>
+    <rect x="200" y="390" width="112" height="6" rx="3" fill="#0d9488"/>
+  </g>
+  <!-- Logo mark scaled and centered -->
+  <g transform="translate(96, 60) scale(5)">
+    <!-- Background paths -->
+    <path d="M10 54 C14 48, 16 42, 20 38 C24 34, 26 32, 28 30 C30 28, 31 26, 33 24 C35 22, 38 18, 42 15 C46 12, 50 10, 54 10"
+          stroke="url(#jdi-mark)" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.2"/>
+    <path d="M14 56 C18 48, 20 42, 24 36 C28 30, 30 28, 32 26 C34 24, 36 22, 38 20 C40 18, 43 14, 47 11 C51 8, 54 7, 56 8"
+          stroke="url(#jdi-mark)" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.35"/>
+    <!-- Main ascending path -->
+    <path d="M8 58 C14 50, 18 44, 22 38 C26 32, 28 28, 32 24 C36 20, 40 16, 44 13 C48 10, 52 8, 56 6"
+          stroke="url(#jdi-mark)" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+    <!-- Human figure -->
+    <g transform="translate(54, 4)">
+      <circle cx="2" cy="2" r="3.2" fill="url(#jdi-mark)"/>
+      <path d="M2 5 L2 12 M-2 7 L2 5 L6 7" stroke="url(#jdi-mark)" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <path d="M2 12 L-1 17 M2 12 L5 17" stroke="url(#jdi-mark)" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </g>
+    <!-- Sunrise rays -->
+    <g opacity="0.35">
+      <line x1="50" y1="4" x2="46" y2="0" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="54" y1="2" x2="54" y2="-3" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="58" y1="4" x2="62" y2="0" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
+    </g>
+    <!-- Milestone dots -->
+    <circle cx="12" cy="55" r="1.8" fill="url(#jdi-mark)" opacity="0.4"/>
+    <circle cx="22" cy="38" r="2" fill="url(#jdi-mark)" opacity="0.55"/>
+    <circle cx="32" cy="24" r="2.2" fill="url(#jdi-mark)" opacity="0.7"/>
+    <circle cx="44" cy="13" r="2.4" fill="url(#jdi-mark)" opacity="0.85"/>
+  </g>
+</svg>

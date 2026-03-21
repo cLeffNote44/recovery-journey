@@ -1,0 +1,392 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ===========================================
+  # Determine Deployment Environment
+  # ===========================================
+  setup:
+    name: Setup Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      version: ${{ steps.set-version.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set environment
+        id: set-env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+          else
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set version
+        id: set-version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION=$(git describe --tags --always --dirty)
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Deploying version: $VERSION"
+
+  # ===========================================
+  # Build and Push Docker Images
+  # ===========================================
+  build-backend:
+    name: Build Backend Image
+    runs-on: ubuntu-latest
+    needs: setup
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./Backend
+          file: ./Backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.setup.outputs.version }}
+
+  # ===========================================
+  # Database Migrations
+  # ===========================================
+  migrate-database:
+    name: Run Database Migrations
+    runs-on: ubuntu-latest
+    needs: [setup, build-backend]
+    environment: ${{ needs.setup.outputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: './Backend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./Backend
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: ./Backend
+        run: npx prisma generate
+
+      - name: Create pre-migration database backup
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          BACKUP_FILE="/tmp/pre_migration_${TIMESTAMP}.sql.gz"
+          echo "Creating pre-migration backup..."
+          pg_dump "${{ secrets.DATABASE_URL }}" --no-owner --no-privileges | gzip > "$BACKUP_FILE"
+          if [[ ! -s "$BACKUP_FILE" ]]; then
+            echo "::error::Pre-migration backup is empty or failed"
+            exit 1
+          fi
+          echo "Pre-migration backup created: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Run migrations
+        working-directory: ./Backend
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  # ===========================================
+  # Deploy to Staging
+  # ===========================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [setup, build-backend, migrate-database]
+    if: needs.setup.outputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.recoveryjourney.app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying version ${{ needs.setup.outputs.version }} to staging..."
+          # Add your deployment commands here
+          # Examples:
+          # - kubectl apply -f k8s/staging/
+          # - docker-compose -f docker-compose.staging.yml up -d
+          # - aws ecs update-service --cluster staging --service backend --force-new-deployment
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying staging deployment..."
+          # Add health check verification
+          # curl -f https://staging-api.recoveryjourney.app/health || exit 1
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "Staging deployment successful!"
+          # Add Slack/Discord notification here if desired
+
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "::error::Staging deployment FAILED for version ${{ needs.setup.outputs.version }}"
+          # Add Slack/Discord failure notification here
+
+  # ===========================================
+  # Deploy to Production
+  # ===========================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [setup, build-backend, migrate-database]
+    if: needs.setup.outputs.environment == 'production'
+    environment:
+      name: production
+      url: https://recoveryjourney.app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying version ${{ needs.setup.outputs.version }} to production..."
+          # Add your production deployment commands here
+          # Ensure blue-green or canary deployment strategy
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying production deployment..."
+          # Add health check verification
+          # curl -f https://api.recoveryjourney.app/health || exit 1
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "Production deployment successful!"
+          # Add Slack/Discord notification here
+
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "::error::Production deployment FAILED for version ${{ needs.setup.outputs.version }}"
+          # Add Slack/Discord failure notification here
+
+  # ===========================================
+  # Build Desktop App (Journey)
+  # ===========================================
+  build-desktop:
+    name: Build Desktop App
+    runs-on: ${{ matrix.os }}
+    needs: setup
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: './Journey/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./Journey
+        run: npm ci
+
+      - name: Build Electron app
+        working-directory: ./Journey
+        run: npm run build:electron
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os }}
+          path: ./Journey/dist-electron/*
+          retention-days: 30
+
+  # ===========================================
+  # Build Mobile App (Recover)
+  # ===========================================
+  build-mobile-android:
+    name: Build Android App
+    runs-on: ubuntu-latest
+    needs: setup
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: './Recover/package-lock.json'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        working-directory: ./Recover
+        run: npm ci
+
+      - name: Build web assets
+        working-directory: ./Recover
+        run: npm run build
+
+      - name: Sync Capacitor
+        working-directory: ./Recover
+        run: npx cap sync android
+
+      - name: Build Android APK
+        working-directory: ./Recover/android
+        run: ./gradlew assembleRelease
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: ./Recover/android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+
+  build-mobile-ios:
+    name: Build iOS App
+    runs-on: macos-latest
+    needs: setup
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: './Recover/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./Recover
+        run: npm ci
+
+      - name: Build web assets
+        working-directory: ./Recover
+        run: npm run build
+
+      - name: Sync Capacitor
+        working-directory: ./Recover
+        run: npx cap sync ios
+
+      - name: Build iOS app
+        working-directory: ./Recover/ios/App
+        run: |
+          xcodebuild -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath build/App.xcarchive \
+            archive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload iOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: ./Recover/ios/App/build/
+          retention-days: 30

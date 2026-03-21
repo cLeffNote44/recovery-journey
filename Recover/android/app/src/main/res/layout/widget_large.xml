@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/widget_background">
+
+    <!-- Top: Days Sober -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/widget_days_sober"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0"
+            android:textSize="56sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:fontFamily="sans-serif-medium"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Days Sober"
+            android:textSize="14sp"
+            android:textColor="#CCCCCC"
+            android:layout_marginTop="4dp"/>
+    </LinearLayout>
+
+    <!-- Middle: Quote -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="12dp">
+
+        <TextView
+            android:id="@+id/widget_quote"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="&quot;One day at a time&quot;"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="italic"
+            android:maxLines="5"
+            android:ellipsize="end"/>
+
+        <TextView
+            android:id="@+id/widget_quote_author"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="— Anonymous"
+            android:textSize="11sp"
+            android:textColor="#B3B3B3"
+            android:layout_marginTop="6dp"/>
+    </LinearLayout>
+
+    <!-- Next Milestone Card -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:background="@drawable/milestone_card_background">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NEXT MILESTONE"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:textColor="#B3B3B3"
+            android:letterSpacing="0.1"/>
+
+        <TextView
+            android:id="@+id/widget_milestone_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="One Month"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:layout_marginTop="6dp"/>
+
+        <TextView
+            android:id="@+id/widget_milestone_days"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="15 days to go"
+            android:textSize="12sp"
+            android:textColor="#CCCCCC"
+            android:layout_marginTop="2dp"/>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+    <!-- Bottom: Streak Indicator -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp">
+
+        <View
+            android:layout_width="6dp"
+            android:layout_height="6dp"
+            android:background="@drawable/streak_indicator"/>
+
+        <TextView
+            android:id="@+id/widget_streak"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 day streak"
+            android:textSize="12sp"
+            android:textColor="#E6E6E6"
+            android:layout_marginStart="4dp"/>
+    </LinearLayout>
+
+</LinearLayout>

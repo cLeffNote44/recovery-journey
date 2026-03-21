@@ -1,0 +1,77 @@
+services:
+  # Development service - runs Vite dev server
+  dev:
+    build:
+      context: .
+      target: development
+    container_name: recover-portal-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      # Mount source code for hot-reload
+      - ./src:/app/src
+      - ./index.html:/app/index.html
+      - ./vite.config.ts:/app/vite.config.ts
+      - ./tailwind.config.js:/app/tailwind.config.js
+      - ./postcss.config.js:/app/postcss.config.js
+      # Prevent overwriting node_modules
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npx vite --host 0.0.0.0
+    networks:
+      - recover-network
+
+  # Builder service - for building distributable packages
+  builder:
+    build:
+      context: .
+      target: builder
+    container_name: recover-portal-builder
+    volumes:
+      # Mount release directory to extract built packages
+      - ./release:/app/release
+      # Prevent overwriting node_modules
+      - /app/node_modules
+    environment:
+      - NODE_ENV=production
+    command: npm run build
+    networks:
+      - recover-network
+
+  # Future: Backend API service (placeholder)
+  # Uncomment and configure when backend is ready
+  # api:
+  #   image: recover-backend:latest
+  #   container_name: recover-backend-api
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - DATABASE_URL=postgresql://user:password@db:5432/recover
+  #     - JWT_SECRET=your-secret-key
+  #   depends_on:
+  #     - db
+  #   networks:
+  #     - recover-network
+
+  # Future: Database service (placeholder)
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: recover-db
+  #   environment:
+  #     - POSTGRES_USER=recover
+  #     - POSTGRES_PASSWORD=recover_password
+  #     - POSTGRES_DB=recover
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - recover-network
+
+networks:
+  recover-network:
+    driver: bridge
+
+# volumes:
+#   postgres_data:

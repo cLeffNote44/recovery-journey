@@ -1,0 +1,109 @@
+# Dependabot configuration
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+
+version: 2
+updates:
+  # Backend npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/Backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "backend"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      development-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "@types/*"
+          - "eslint*"
+          - "typescript"
+          - "vitest"
+      production-dependencies:
+        dependency-type: "production"
+    reviewers:
+      - "your-org/backend-team"
+
+  # Journey npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/Journey"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "journey"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      electron:
+        patterns:
+          - "electron*"
+      react:
+        patterns:
+          - "react*"
+          - "@tanstack/*"
+    reviewers:
+      - "your-org/frontend-team"
+
+  # Recover npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/Recover"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "recover"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      capacitor:
+        patterns:
+          - "@capacitor/*"
+      ionic:
+        patterns:
+          - "@ionic/*"
+    reviewers:
+      - "your-org/mobile-team"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "ci(deps)"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/Backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "build(deps)"

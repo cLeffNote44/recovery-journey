@@ -1,0 +1,79 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+
+# Get list of staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+# Check if any Backend files are staged
+BACKEND_FILES=$(echo "$STAGED_FILES" | grep "^Backend/" || true)
+if [ -n "$BACKEND_FILES" ]; then
+    echo "📦 Checking Backend..."
+    cd Backend
+
+    # Run lint on staged files only
+    STAGED_TS_FILES=$(echo "$BACKEND_FILES" | grep -E '\.(ts|js)$' | sed 's|^Backend/||' || true)
+    if [ -n "$STAGED_TS_FILES" ]; then
+        echo "  Running ESLint..."
+        echo "$STAGED_TS_FILES" | xargs npx eslint --fix --max-warnings 0
+
+        echo "  Running TypeScript check..."
+        npx tsc --noEmit
+    fi
+
+    cd ..
+fi
+
+# Check if any Journey files are staged
+JOURNEY_FILES=$(echo "$STAGED_FILES" | grep "^Journey/" || true)
+if [ -n "$JOURNEY_FILES" ]; then
+    echo "📦 Checking Journey..."
+    cd Journey
+
+    STAGED_TS_FILES=$(echo "$JOURNEY_FILES" | grep -E '\.(ts|tsx|js|jsx)$' | sed 's|^Journey/||' || true)
+    if [ -n "$STAGED_TS_FILES" ]; then
+        echo "  Running ESLint..."
+        echo "$STAGED_TS_FILES" | xargs npx eslint --fix --max-warnings 0
+
+        echo "  Running TypeScript check..."
+        npx tsc --noEmit
+    fi
+
+    cd ..
+fi
+
+# Check if any Recover files are staged
+RECOVER_FILES=$(echo "$STAGED_FILES" | grep "^Recover/" || true)
+if [ -n "$RECOVER_FILES" ]; then
+    echo "📦 Checking Recover..."
+    cd Recover
+
+    STAGED_TS_FILES=$(echo "$RECOVER_FILES" | grep -E '\.(ts|tsx|js|jsx)$' | sed 's|^Recover/||' || true)
+    if [ -n "$STAGED_TS_FILES" ]; then
+        echo "  Running ESLint..."
+        echo "$STAGED_TS_FILES" | xargs npx eslint --fix --max-warnings 0
+
+        echo "  Running TypeScript check..."
+        npx tsc --noEmit
+    fi
+
+    cd ..
+fi
+
+# Check for secrets in staged files
+echo "🔐 Checking for secrets..."
+if echo "$STAGED_FILES" | xargs grep -l -E "(password|secret|api_key|apikey|token).*=.*['\"][^'\"]{8,}['\"]" 2>/dev/null; then
+    echo "⚠️  Warning: Possible secrets detected in staged files!"
+    echo "Please review the files above and remove any sensitive data."
+    exit 1
+fi
+
+# Check for .env files
+if echo "$STAGED_FILES" | grep -E "\.env$|\.env\." | grep -v "\.example$" | grep -v "\.template$"; then
+    echo "❌ Error: Attempting to commit .env file!"
+    echo "Remove the .env file from staging with: git reset HEAD <file>"
+    exit 1
+fi
+
+echo "✅ Pre-commit checks passed!"

@@ -1,0 +1,52 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "📝 Validating commit message..."
+
+# Read the commit message
+COMMIT_MSG=$(cat "$1")
+
+# Define the conventional commit pattern
+# Format: type(scope): description
+# Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+PATTERN="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9_-]+\))?: .{1,100}$"
+
+# Check first line of commit message
+FIRST_LINE=$(echo "$COMMIT_MSG" | head -n 1)
+
+if ! echo "$FIRST_LINE" | grep -qE "$PATTERN"; then
+    echo "❌ Invalid commit message format!"
+    echo ""
+    echo "Expected format: type(scope): description"
+    echo ""
+    echo "Valid types:"
+    echo "  feat:     A new feature"
+    echo "  fix:      A bug fix"
+    echo "  docs:     Documentation only changes"
+    echo "  style:    Code style changes (formatting, etc)"
+    echo "  refactor: Code refactoring"
+    echo "  perf:     Performance improvements"
+    echo "  test:     Adding or updating tests"
+    echo "  build:    Build system changes"
+    echo "  ci:       CI/CD changes"
+    echo "  chore:    Other changes"
+    echo "  revert:   Revert a previous commit"
+    echo ""
+    echo "Examples:"
+    echo "  feat(auth): add JWT refresh token support"
+    echo "  fix(api): handle null values in patient sync"
+    echo "  docs: update README with deployment instructions"
+    echo ""
+    echo "Your message: $FIRST_LINE"
+    exit 1
+fi
+
+# Check message length
+if [ ${#FIRST_LINE} -gt 100 ]; then
+    echo "❌ Commit message too long!"
+    echo "Maximum length: 100 characters"
+    echo "Current length: ${#FIRST_LINE} characters"
+    exit 1
+fi
+
+echo "✅ Commit message is valid!"
