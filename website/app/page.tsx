@@ -426,7 +426,7 @@ export default function HomePage() {
 
               {/* Home Screen Screenshot */}
               <div className="flex justify-center mb-6">
-                <div className="transform rotate-1 hover:rotate-0 transition-transform duration-300">
+                <div className="">
                   <PhoneFrame
                     src="/screenshots/recover-home.png"
                     alt="Recover patient app home screen showing 46 days clean and daily wellness tracking"
@@ -557,7 +557,7 @@ export default function HomePage() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              <div className="transform -rotate-2 hover:rotate-0 transition-transform duration-300">
+              <div className="">
                 <PhoneFrame
                   src="/screenshots/recover-home.png"
                   alt="Recover home screen showing 46 days clean with daily wellness tracking"
@@ -573,7 +573,7 @@ export default function HomePage() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <div className="transform rotate-1 hover:rotate-0 transition-transform duration-300">
+              <div className="">
                 <PhoneFrame
                   src="/screenshots/recover-checkin.png"
                   alt="Recover daily check-in modal for mood and craving tracking"
@@ -589,7 +589,7 @@ export default function HomePage() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <div className="transform -rotate-1 hover:rotate-0 transition-transform duration-300">
+              <div className="">
                 <PhoneFrame
                   src="/screenshots/recover-prevention.png"
                   alt="Recover relapse prevention tools with coping strategies and emergency contacts"
@@ -605,7 +605,7 @@ export default function HomePage() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
-              <div className="transform rotate-2 hover:rotate-0 transition-transform duration-300">
+              <div className="">
                 <PhoneFrame
                   src="/screenshots/recover-journal.png"
                   alt="Recover journal and cravings tracking tab"
