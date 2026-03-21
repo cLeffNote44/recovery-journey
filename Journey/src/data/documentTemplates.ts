@@ -179,14 +179,14 @@ export const documentTemplates = {
 
 <h3>II. SUBSTANCE USE HISTORY</h3>
 <table>
-<tr><th>Substance</th><th>Age First Used</th><th>Route</th><th>Frequency</th><th>Last Use</th><th>Amount</th></tr>
-<tr><td>Alcohol</td><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td></tr>
-<tr><td>Cannabis</td><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td></tr>
-<tr><td>Cocaine</td><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td></tr>
-<tr><td>Opioids</td><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td></tr>
-<tr><td>Benzodiazepines</td><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td></tr>
-<tr><td>Methamphetamine</td><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td></tr>
-<tr><td>Other: ________</td><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td></tr>
+<tr><th>Substance</th><th>Age 1st Use</th><th>Route</th><th>Freq.</th><th>Last Use</th><th>Amt.</th></tr>
+<tr><td>Alcohol</td><td>______</td><td>______</td><td>______</td><td>______</td><td>______</td></tr>
+<tr><td>Cannabis</td><td>______</td><td>______</td><td>______</td><td>______</td><td>______</td></tr>
+<tr><td>Cocaine</td><td>______</td><td>______</td><td>______</td><td>______</td><td>______</td></tr>
+<tr><td>Opioids</td><td>______</td><td>______</td><td>______</td><td>______</td><td>______</td></tr>
+<tr><td>Benzos</td><td>______</td><td>______</td><td>______</td><td>______</td><td>______</td></tr>
+<tr><td>Meth</td><td>______</td><td>______</td><td>______</td><td>______</td><td>______</td></tr>
+<tr><td>Other: ________</td><td>______</td><td>______</td><td>______</td><td>______</td><td>______</td></tr>
 </table>
 
 <p><strong>Primary Drug of Choice:</strong> _______________________________________</p>
@@ -230,7 +230,7 @@ export const documentTemplates = {
 
 <h3>VIII. RECOMMENDATIONS</h3>
 <p><strong>Level of Care:</strong> ☐ Detox ☐ Residential ☐ PHP ☐ IOP ☐ Outpatient</p>
-<p><strong>Treatment Recommendations:</strong></p>
+<p><strong>Treatment Recommendations:</strong> _______________________________________</p>
 <p>_______________________________________</p>
 
 <hr>

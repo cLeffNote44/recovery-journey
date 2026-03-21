@@ -5,6 +5,12 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-03-21
+
+### Fixed
+- Biopsychosocial Assessment: substance use history table no longer overflows page (abbreviated column headers, reduced padding, scrollable container for wide tables)
+- Biopsychosocial Assessment: Treatment Recommendations field now fillable (moved to same line as label, added second line)
+
 ## [1.2.1] - 2026-03-21
 
 ### Fixed

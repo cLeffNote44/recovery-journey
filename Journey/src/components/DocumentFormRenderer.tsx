@@ -854,29 +854,34 @@ function BlockRenderer({
 
   // --- Table ---
   if (block.tag === 'table' && block.tableRows) {
+    const columnCount = block.tableRows[0]?.cells.length ?? 0
+    const isWide = columnCount > 4
     return (
-      <table className="w-full border-collapse my-3 text-sm">
-        <tbody>
-          {block.tableRows.map((row, ri) => (
-            <tr key={ri} className={ri === 0 ? 'bg-gray-50 dark:bg-gray-700' : ''}>
-              {row.cells.map((cell, ci) => {
-                const CellTag = ri === 0 ? 'th' : 'td'
-                return (
-                  <CellTag
-                    key={ci}
-                    className={
-                      'border border-gray-300 dark:border-gray-600 px-3 py-2 text-left ' +
-                      (ri === 0 ? 'font-semibold text-gray-700 dark:text-gray-300' : 'text-gray-800 dark:text-gray-200')
-                    }
-                  >
-                    <ChunkRenderer chunks={cell} fields={fields} values={values} onChange={onChange} readOnly={readOnly} />
-                  </CellTag>
-                )
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="overflow-x-auto my-3">
+        <table className="w-full border-collapse text-sm" style={{ minWidth: isWide ? '100%' : undefined }}>
+          <tbody>
+            {block.tableRows.map((row, ri) => (
+              <tr key={ri} className={ri === 0 ? 'bg-gray-50 dark:bg-gray-700' : ''}>
+                {row.cells.map((cell, ci) => {
+                  const CellTag = ri === 0 ? 'th' : 'td'
+                  return (
+                    <CellTag
+                      key={ci}
+                      className={
+                        'border border-gray-300 dark:border-gray-600 text-left whitespace-nowrap ' +
+                        (isWide ? 'px-2 py-1.5 ' : 'px-3 py-2 ') +
+                        (ri === 0 ? 'font-semibold text-gray-700 dark:text-gray-300 text-xs' : 'text-gray-800 dark:text-gray-200')
+                      }
+                    >
+                      <ChunkRenderer chunks={cell} fields={fields} values={values} onChange={onChange} readOnly={readOnly} />
+                    </CellTag>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     )
   }
 
