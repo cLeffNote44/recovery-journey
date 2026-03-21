@@ -28,6 +28,8 @@ interface ParsedField {
   label: string
   /** Approximate character width of the original underscore run. */
   width: number
+  /** If this field originated from a bracket placeholder like [Facility Name]. */
+  fromBracket?: boolean
 }
 
 /**
@@ -61,6 +63,9 @@ const UNDERSCORE_RE = /_{3,}/g
 
 /** Matches checkbox character followed by a label word. */
 const CHECKBOX_RE = /☐\s*([^☐<]*)/g
+
+/** Detect bracket placeholder patterns like [Facility Name]. */
+const BRACKET_RE = /\[([A-Z][^\]]{2,})\]/g
 
 /** Detect date-like patterns: ____/____/________ */
 const DATE_PATTERN_RE = /_{3,}\/_{3,}\/_{3,}/g
@@ -194,7 +199,8 @@ function parseInlineHtml(
     return candidate
   }
 
-  // We scan for the *first* match of either pattern, consume it, push chunks.
+  // We scan for the *first* match of checkbox, underscore run, or bracket
+  // pattern, consume it, push chunks.
   while (cursor < html.length) {
     // --- Checkbox ---
     const cbRe = /☐\s*([^☐<]*)/g
@@ -202,63 +208,98 @@ function parseInlineHtml(
     const cbMatch = cbRe.exec(html)
 
     // --- Underscore ---
-    // We need to find structured patterns first (date, phone, ssn), then plain.
-    // Scan for the next underscore run starting from cursor.
     const usRe = /_{3,}/g
     usRe.lastIndex = cursor
     const usMatch = usRe.exec(html)
 
+    // --- Bracket placeholder ---
+    const brRe = /\[([A-Z][^\]]{2,})\]/g
+    brRe.lastIndex = cursor
+    const brMatch = brRe.exec(html)
+
     // Determine which comes first.
     const cbIdx = cbMatch ? cbMatch.index : Infinity
     const usIdx = usMatch ? usMatch.index : Infinity
+    const brIdx = brMatch ? brMatch.index : Infinity
 
-    if (cbIdx === Infinity && usIdx === Infinity) {
+    const minIdx = Math.min(cbIdx, usIdx, brIdx)
+
+    if (minIdx === Infinity) {
       // No more fillable content — emit remainder as static.
       chunks.push({ kind: 'html', html: html.slice(cursor) })
       break
     }
 
-    if (cbIdx <= usIdx) {
-      // Checkbox comes first (or is at the same position).
-      if (cbMatch) {
-        // Emit static content before the checkbox.
-        if (cbMatch.index > cursor) {
-          chunks.push({ kind: 'html', html: html.slice(cursor, cbMatch.index) })
-        }
-        const label = cbMatch[1].trim() || 'option'
-        const fieldId = makeFieldId(label, 'checkbox')
-        fields.set(fieldId, {
-          id: fieldId,
-          type: 'checkbox',
-          label,
-          width: 1,
-        })
-        chunks.push({ kind: 'field', fieldId })
-        cursor = cbMatch.index + cbMatch[0].length
+    if (minIdx === cbIdx && cbMatch) {
+      // Checkbox comes first (or is at the same position as another).
+      // Check if the captured label contains an underscore run — if so,
+      // truncate the checkbox label before the underscores so they become
+      // separate text inputs on the next iteration.
+      let labelText = cbMatch[1]
+      let consumeEnd = cbMatch.index + cbMatch[0].length
+
+      const underscoreInLabel = labelText.match(/_{3,}/)
+      if (underscoreInLabel && underscoreInLabel.index !== undefined) {
+        // Truncate: only consume up to where the underscores start in the
+        // original HTML.  The underscores will be picked up next iteration.
+        const underscoreOffsetInCapture = underscoreInLabel.index
+        labelText = labelText.slice(0, underscoreOffsetInCapture)
+        // consumeEnd = start of ☐ + length of "☐ " prefix + offset to underscore
+        consumeEnd = cbMatch.index + (cbMatch[0].length - cbMatch[1].length) + underscoreOffsetInCapture
       }
-    } else {
+
+      // Emit static content before the checkbox.
+      if (cbMatch.index > cursor) {
+        chunks.push({ kind: 'html', html: html.slice(cursor, cbMatch.index) })
+      }
+      const label = labelText.trim() || 'option'
+      const fieldId = makeFieldId(label, 'checkbox')
+      fields.set(fieldId, {
+        id: fieldId,
+        type: 'checkbox',
+        label,
+        width: 1,
+      })
+      chunks.push({ kind: 'field', fieldId })
+      cursor = consumeEnd
+    } else if (minIdx === usIdx && usMatch) {
       // Underscore run comes first.
-      if (usMatch) {
-        // Check if this is part of a structured pattern.
-        const classification = classifyUnderscoreRun(html, usMatch.index, usMatch[0].length)
+      // Check if this is part of a structured pattern.
+      const classification = classifyUnderscoreRun(html, usMatch.index, usMatch[0].length)
 
-        // Emit static content before the pattern.
-        if (classification.consumeStart > cursor) {
-          chunks.push({ kind: 'html', html: html.slice(cursor, classification.consumeStart) })
-        }
-
-        const label = extractLabel(classification.consumeStart)
-        const fieldId = makeFieldId(label, classification.type)
-        const patternText = html.slice(classification.consumeStart, classification.consumeEnd)
-        fields.set(fieldId, {
-          id: fieldId,
-          type: classification.type,
-          label,
-          width: patternText.replace(/<[^>]+>/g, '').length,
-        })
-        chunks.push({ kind: 'field', fieldId })
-        cursor = classification.consumeEnd
+      // Emit static content before the pattern.
+      if (classification.consumeStart > cursor) {
+        chunks.push({ kind: 'html', html: html.slice(cursor, classification.consumeStart) })
       }
+
+      const label = extractLabel(classification.consumeStart)
+      const fieldId = makeFieldId(label, classification.type)
+      const patternText = html.slice(classification.consumeStart, classification.consumeEnd)
+      fields.set(fieldId, {
+        id: fieldId,
+        type: classification.type,
+        label,
+        width: patternText.replace(/<[^>]+>/g, '').length,
+      })
+      chunks.push({ kind: 'field', fieldId })
+      cursor = classification.consumeEnd
+    } else if (minIdx === brIdx && brMatch) {
+      // Bracket placeholder comes first.
+      // Emit static content before the bracket.
+      if (brMatch.index > cursor) {
+        chunks.push({ kind: 'html', html: html.slice(cursor, brMatch.index) })
+      }
+      const placeholderText = brMatch[1].trim()
+      const fieldId = makeFieldId(placeholderText, 'text')
+      fields.set(fieldId, {
+        id: fieldId,
+        type: 'text',
+        label: placeholderText,
+        width: Math.max(placeholderText.length + 4, 20),
+        fromBracket: true,
+      })
+      chunks.push({ kind: 'field', fieldId })
+      cursor = brMatch.index + brMatch[0].length
     }
   }
 
@@ -294,13 +335,18 @@ function parseTemplate(html: string): { blocks: ParsedBlock[]; fields: Map<strin
     const el = node as Element
     const tag = el.tagName.toLowerCase()
 
+    /** Check if innerHTML contains any fillable patterns. Uses non-global tests to avoid lastIndex issues. */
+    function hasFillableContent(innerHTML: string): boolean {
+      return /_{3,}/.test(innerHTML) || /☐/.test(innerHTML) || /\[[A-Z][^\]]{2,}\]/.test(innerHTML)
+    }
+
     // Track section for labelling.
     if (['h1', 'h2', 'h3'].includes(tag)) {
       const heading = el.textContent?.trim() || ''
       currentSection = heading.slice(0, 40)
       // Check if heading itself has fillable fields (unlikely but possible).
       const innerHtml = el.innerHTML
-      if (UNDERSCORE_RE.test(innerHtml) || CHECKBOX_RE.test(innerHtml)) {
+      if (hasFillableContent(innerHtml)) {
         const chunks = parseInlineHtml(innerHtml, fields, currentSection, blockIndex++)
         blocks.push({ tag, chunks })
       } else {
@@ -320,7 +366,7 @@ function parseTemplate(html: string): { blocks: ParsedBlock[]; fields: Map<strin
         const cells: Chunk[][] = []
         tr.querySelectorAll('th, td').forEach((cell) => {
           const innerHtml = cell.innerHTML
-          if (UNDERSCORE_RE.test(innerHtml) || CHECKBOX_RE.test(innerHtml)) {
+          if (hasFillableContent(innerHtml)) {
             cells.push(parseInlineHtml(innerHtml, fields, currentSection, blockIndex++))
           } else {
             cells.push([{ kind: 'html', html: innerHtml }])
@@ -336,7 +382,7 @@ function parseTemplate(html: string): { blocks: ParsedBlock[]; fields: Map<strin
       const items: Chunk[][] = []
       el.querySelectorAll(':scope > li').forEach((li) => {
         const innerHtml = li.innerHTML
-        if (UNDERSCORE_RE.test(innerHtml) || CHECKBOX_RE.test(innerHtml)) {
+        if (hasFillableContent(innerHtml)) {
           items.push(parseInlineHtml(innerHtml, fields, currentSection, blockIndex++))
         } else {
           items.push([{ kind: 'html', html: innerHtml }])
@@ -348,7 +394,7 @@ function parseTemplate(html: string): { blocks: ParsedBlock[]; fields: Map<strin
 
     if (tag === 'p') {
       const innerHtml = el.innerHTML
-      if (UNDERSCORE_RE.test(innerHtml) || CHECKBOX_RE.test(innerHtml)) {
+      if (hasFillableContent(innerHtml)) {
         const chunks = parseInlineHtml(innerHtml, fields, currentSection, blockIndex++)
         blocks.push({ tag: 'p', chunks })
       } else {
@@ -372,7 +418,7 @@ function parseTemplate(html: string): { blocks: ParsedBlock[]; fields: Map<strin
  * renderer or the rich-text editor.
  */
 export function templateHasFormFields(html: string): boolean {
-  return /_{3,}/.test(html) || /☐/.test(html)
+  return /_{3,}/.test(html) || /☐/.test(html) || /\[[A-Z][^\]]{2,}\]/.test(html)
 }
 
 // ---------------------------------------------------------------------------
@@ -420,7 +466,9 @@ function FieldInput({ field, value, onChange, readOnly }: FieldInputProps) {
       ? '(___) ___-____'
       : field.type === 'ssn'
         ? '___-__-____'
-        : ''
+        : field.fromBracket
+          ? field.label
+          : ''
 
   return (
     <input
@@ -538,7 +586,7 @@ export default function DocumentFormRenderer({
       // Only process leaf containers (p, td, th, li) that have fillable content.
       if (['p', 'td', 'th', 'li'].includes(tag)) {
         const inner = el.innerHTML
-        if (/_{3,}/.test(inner) || /☐/.test(inner)) {
+        if (/_{3,}/.test(inner) || /☐/.test(inner) || /\[[A-Z][^\]]{2,}\]/.test(inner)) {
           // Re-parse this element's inline HTML to map fields to positions.
           const localFields = new Map<string, ParsedField>()
           const chunks = parseInlineHtml(inner, localFields, '', 0)
@@ -575,7 +623,13 @@ export default function DocumentFormRenderer({
                 rebuilt += val ? '☑ ' + localField.label : '☐ ' + localField.label
               } else {
                 const strVal = typeof val === 'string' ? val : ''
-                rebuilt += strVal || '_'.repeat(localField.width)
+                if (strVal) {
+                  rebuilt += strVal
+                } else if (localField.fromBracket) {
+                  rebuilt += `[${localField.label}]`
+                } else {
+                  rebuilt += '_'.repeat(localField.width)
+                }
               }
             }
           }
