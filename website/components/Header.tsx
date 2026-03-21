@@ -6,6 +6,8 @@ import { Menu, X } from 'lucide-react';
 
 const navLinks = [
   { href: '/features', label: 'Features' },
+  { href: '/recover-app', label: 'Patient App' },
+  { href: '/journey-portal', label: 'Clinician Portal' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/compliance', label: 'Compliance' },
   { href: '/contact', label: 'Contact' },
