@@ -5,6 +5,21 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-03-21
+
+### Added
+- Document template/copy system: Templates tab with 14 undeletable stock forms and Patient Documents tab for filled copies
+- CreateDocumentModal: set document title, select patient from searchable dropdown, pick category before opening form
+- Template cards with "Preview" (read-only) and "Use Template" (creates copy) actions
+- Patient Documents tab with edit, delete (with confirmation), search by patient name, and sort by date/name
+- `templateList` metadata in documentTemplates.ts with clean names, categories, and descriptions
+
+### Changed
+- Documents page restructured from flat list to tabbed Templates + Patient Documents layout
+- Stock templates are now undeletable and uneditable — clinicians work with copies only
+- Template names cleaned up: removed "TEMPLATE -" prefix and patient names from titles
+- Removed old mockDocuments array, replaced with structured template list and demo patient documents
+
 ## [1.2.2] - 2026-03-21
 
 ### Fixed

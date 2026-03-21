@@ -698,4 +698,33 @@ export const documentTemplates = {
 
 export type DocumentTemplateKey = keyof typeof documentTemplates
 
+// ============================================================================
+// TEMPLATE LIST METADATA
+// ============================================================================
+
+export interface DocumentTemplate {
+  id: string
+  name: string
+  category: string
+  description: string
+  templateKey: DocumentTemplateKey
+}
+
+export const templateList: DocumentTemplate[] = [
+  { id: 'tpl-intake', name: 'Patient Intake Form', category: 'intake', description: 'Comprehensive patient admission form with personal, contact, and referral information', templateKey: 'patientIntake' },
+  { id: 'tpl-medical', name: 'Medical History Questionnaire', category: 'medical', description: 'Health assessment including conditions, medications, allergies, and family history', templateKey: 'medicalHistory' },
+  { id: 'tpl-consent', name: 'Consent for Treatment', category: 'consent', description: 'Informed consent and authorization for substance abuse treatment services', templateKey: 'consentTreatment' },
+  { id: 'tpl-hipaa', name: 'HIPAA Authorization', category: 'consent', description: 'Authorization for use and disclosure of protected health information', templateKey: 'hipaaConsent' },
+  { id: 'tpl-biopsychosocial', name: 'Biopsychosocial Assessment', category: 'intake', description: 'Comprehensive evaluation of biological, psychological, and social factors', templateKey: 'biopsychosocial' },
+  { id: 'tpl-risk', name: 'Risk Assessment', category: 'medical', description: 'Suicide, self-harm, and violence risk screening and evaluation', templateKey: 'riskAssessment' },
+  { id: 'tpl-treatment', name: 'Treatment Plan', category: 'progress', description: 'Individualized treatment plan with goals, objectives, and interventions', templateKey: 'treatmentPlan' },
+  { id: 'tpl-progress', name: 'Progress Note', category: 'progress', description: 'Clinical progress note documenting session content and patient status', templateKey: 'progressNote' },
+  { id: 'tpl-group', name: 'Group Therapy Note', category: 'progress', description: 'Group session documentation including topics, participation, and observations', templateKey: 'groupNote' },
+  { id: 'tpl-daily', name: 'Daily Progress Note', category: 'progress', description: 'Daily clinical observation note with subjective, objective, assessment, and plan', templateKey: 'dailyProgressNote' },
+  { id: 'tpl-discharge', name: 'Discharge Summary', category: 'discharge', description: 'Comprehensive discharge documentation with treatment summary and recommendations', templateKey: 'dischargeSummary' },
+  { id: 'tpl-aftercare', name: 'Aftercare Plan', category: 'discharge', description: 'Continuing care plan with support resources, meetings, and follow-up schedule', templateKey: 'aftercarePlan' },
+  { id: 'tpl-ama', name: 'AMA Discharge Form', category: 'discharge', description: 'Against medical advice discharge documentation and risk acknowledgment', templateKey: 'amaForm' },
+  { id: 'tpl-incident', name: 'Incident Report', category: 'other', description: 'Facility incident documentation including details, witnesses, and follow-up actions', templateKey: 'incidentReport' },
+]
+
 export default documentTemplates
