@@ -45,6 +45,7 @@ export default function Messages() {
             setSelectedConversation(response.conversations[0])
           }
           setIsUsingMockData(false)
+          setIsLoadingConversations(false)
           return
         }
       } catch {
@@ -88,6 +89,7 @@ export default function Messages() {
     }
 
     fetchMessages()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConversation?.id])
 
   const handleSend = async () => {

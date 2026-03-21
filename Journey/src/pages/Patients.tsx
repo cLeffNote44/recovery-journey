@@ -37,6 +37,21 @@ export default function Patients() {
   // Debounce search for audit logging
   const debouncedSearch = useDebounce(search, 500)
 
+  // Map API camelCase patient to MockPatient snake_case shape
+  const mapApiPatient = (p: Record<string, unknown>): MockPatient => ({
+    id: p.id as string,
+    first_name: (p.firstName || p.first_name || '') as string,
+    last_name: (p.lastName || p.last_name || '') as string,
+    status: ((p.status as string) || 'active').toLowerCase() as 'active' | 'pending' | 'discharged',
+    days_sober: (p.daysSober || p.days_sober || 0) as number,
+    check_in_streak: (p.checkInStreak || p.check_in_streak || 0) as number,
+    admission_date: (p.admissionDate || p.admission_date || '') as string,
+    counselor_name: p.assignedCounselor
+      ? `${(p.assignedCounselor as { firstName?: string }).firstName || ''} ${(p.assignedCounselor as { lastName?: string }).lastName || ''}`.trim()
+      : (p.counselor_name || '') as string,
+    registration_key: (p.registrationKey || p.registration_key) as string | undefined,
+  })
+
   // Fetch patients from API
   useEffect(() => {
     const fetchPatients = async () => {
@@ -45,7 +60,7 @@ export default function Patients() {
       try {
         const response = await patientsAPI.getAll({ status: statusFilter !== 'all' ? statusFilter : undefined })
         if (response.success && response.patients) {
-          setPatients(response.patients)
+          setPatients(response.patients.map((p: Record<string, unknown>) => mapApiPatient(p)))
           setIsUsingMockData(false)
 
           // Log patient list view (once per session)

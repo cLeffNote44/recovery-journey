@@ -5,6 +5,12 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-03-21
+
+### Fixed
+- Patients page crash: API returns camelCase fields (`firstName`) but frontend expected snake_case (`first_name`). Added mapping layer to normalize API responses.
+- Messages page infinite loading: `setIsLoadingConversations(false)` was never called on API success path, causing the page to stay in loading state when the API returned empty conversations.
+
 ## [1.3.1] - 2026-03-21
 
 ### Added
