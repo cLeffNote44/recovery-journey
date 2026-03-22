@@ -27,14 +27,19 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2.5 mb-4">
+            <Link href="/" className="flex items-center gap-1.5 mb-4">
               <img
-                src="/logo.svg"
-                alt="RecoverJourney"
-                className="h-8 w-auto"
+                src="/brand-recover-icon.jpg"
+                alt=""
+                className="h-8 w-8 rounded-md object-cover"
               />
-              <span className="text-lg font-bold text-white tracking-tight">
-                Recover<span className="text-teal-400">Journey</span>
+              <img
+                src="/brand-journey-icon.jpg"
+                alt=""
+                className="h-8 w-8 rounded-md object-cover"
+              />
+              <span className="text-lg font-bold tracking-tight ml-1">
+                <span className="text-blue-400">Recover</span><span className="text-teal-400">Journey</span>
               </span>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed max-w-xs">

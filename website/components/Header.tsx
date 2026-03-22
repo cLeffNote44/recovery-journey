@@ -20,14 +20,19 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 group">
+          <Link href="/" className="flex items-center gap-1.5 group">
             <img
-              src="/logo.svg"
-              alt="RecoverJourney"
-              className="h-8 w-auto"
+              src="/brand-recover-icon.jpg"
+              alt=""
+              className="h-8 w-8 rounded-md object-cover"
             />
-            <span className="hidden sm:inline text-lg font-bold text-white tracking-tight">
-              Recover<span className="text-teal-400">Journey</span>
+            <img
+              src="/brand-journey-icon.jpg"
+              alt=""
+              className="h-8 w-8 rounded-md object-cover"
+            />
+            <span className="hidden sm:inline text-lg font-bold tracking-tight ml-1">
+              <span className="text-blue-400">Recover</span><span className="text-teal-400">Journey</span>
             </span>
           </Link>
 
