@@ -63,10 +63,10 @@ export default function ContactPage() {
                   For general inquiries or support questions.
                 </p>
                 <a
-                  href="mailto:hello@recoverjourney.com"
+                  href="mailto:cody@leffel.io"
                   className="text-sm text-teal-400 hover:text-teal-300 transition-colors"
                 >
-                  hello@recoverjourney.com
+                  cody@leffel.io
                 </a>
               </div>
 

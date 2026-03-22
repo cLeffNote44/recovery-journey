@@ -215,7 +215,7 @@ Every PHI access logged with user, timestamp, action, resource, and fields viewe
 
 We'd love to show you RecoverJourney in action.
 
-- **Email:** hello@recoverjourney.com
+- **Email:** cody@leffel.io
 - **Website:** recoverjourney.com
 - **Schedule a Consultation:** recoverjourney.com/contact
 
