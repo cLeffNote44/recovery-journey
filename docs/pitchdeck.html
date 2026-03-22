@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RecoverJourney Pitch Deck</title>
+<style>
+  /* ── Reset & Base ─────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #0f172a;
+    --navy-light: #1e293b;
+    --teal: #0d9488;
+    --teal-light: #14b8a6;
+    --blue: #3b82f6;
+    --blue-light: #60a5fa;
+    --slate: #64748b;
+    --slate-light: #94a3b8;
+    --slate-dark: #475569;
+    --bg: #ffffff;
+    --bg-alt: #f8fafc;
+    --border: #e2e8f0;
+    --border-light: #f1f5f9;
+  }
+
+  html { font-size: 11px; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, Helvetica, sans-serif;
+    color: var(--slate-dark);
+    background: var(--bg);
+    line-height: 1.5;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── Page / Slide ─────────────────────────────────────── */
+  .slide {
+    width: 8.5in;
+    min-height: 11in;
+    max-height: 11in;
+    padding: 0.75in;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .slide + .slide { page-break-before: always; }
+
+  .slide-content { flex: 1; }
+
+  /* ── Page number footer ───────────────────────────────── */
+  .page-number {
+    position: absolute;
+    bottom: 0.5in;
+    right: 0.75in;
+    font-size: 0.82rem;
+    color: var(--slate-light);
+  }
+
+  .page-footer-left {
+    position: absolute;
+    bottom: 0.5in;
+    left: 0.75in;
+    font-size: 0.72rem;
+    color: var(--slate-light);
+  }
+
+  /* ── Typography ───────────────────────────────────────── */
+  h1 { font-size: 2.8rem; font-weight: 800; color: var(--navy); line-height: 1.15; }
+  h2 { font-size: 2rem; font-weight: 700; color: var(--navy); margin-bottom: 0.25rem; line-height: 1.2; }
+  h3 { font-size: 1.18rem; font-weight: 700; color: var(--navy); margin-bottom: 0.15rem; }
+  h4 { font-size: 1rem; font-weight: 600; color: var(--navy); }
+
+  .subtitle {
+    font-size: 1.18rem;
+    color: var(--teal);
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+  }
+
+  .section-intro {
+    font-size: 1rem;
+    color: var(--slate);
+    line-height: 1.6;
+    max-width: 6.5in;
+    margin-bottom: 0.5rem;
+  }
+
+  .text-teal { color: var(--teal); }
+  .text-blue { color: var(--blue); }
+  .text-navy { color: var(--navy); }
+  .text-slate { color: var(--slate); }
+  .text-slate-light { color: var(--slate-light); }
+  .font-bold { font-weight: 700; }
+  .font-semibold { font-weight: 600; }
+
+  /* ── Layout helpers ───────────────────────────────────── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .grid-2-wide { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.5rem; }
+  .flex-col { display: flex; flex-direction: column; }
+  .flex-center { display: flex; align-items: center; justify-content: center; }
+  .gap-sm { gap: 0.3rem; }
+
+  /* ── Cards ────────────────────────────────────────────── */
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.55rem;
+    background: var(--bg);
+  }
+
+  .card-alt {
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.55rem;
+    background: var(--bg-alt);
+  }
+
+  .card-accent {
+    border: 1.5px solid var(--teal);
+    border-radius: 0.5rem;
+    padding: 0.55rem 0.6rem;
+    background: #f0fdfa;
+  }
+
+  .card h3 { margin-bottom: 0.1rem; }
+  .card p, .card-alt p, .card-accent p { font-size: 0.88rem; color: var(--slate); line-height: 1.45; }
+
+  /* ── Icon dots ────────────────────────────────────────── */
+  .icon-dot {
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 0.35rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    flex-shrink: 0;
+  }
+  .icon-dot-teal { background: #ccfbf1; color: var(--teal); }
+  .icon-dot-blue { background: #dbeafe; color: var(--blue); }
+  .icon-dot-navy { background: #e2e8f0; color: var(--navy); }
+  .icon-dot-red { background: #fee2e2; color: #dc2626; }
+  .icon-dot-amber { background: #fef3c7; color: #d97706; }
+
+  /* ── Stat boxes ───────────────────────────────────────── */
+  .stat-box {
+    text-align: center;
+    padding: 0.45rem 0.3rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--bg-alt);
+  }
+  .stat-box .stat-number {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--teal);
+    line-height: 1.2;
+  }
+  .stat-box .stat-label {
+    font-size: 0.78rem;
+    color: var(--slate);
+    line-height: 1.3;
+  }
+
+  /* ── Numbered step circles ────────────────────────────── */
+  .step-circle {
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 50%;
+    background: var(--teal);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ── Divider ──────────────────────────────────────────── */
+  .divider {
+    border: none;
+    border-top: 1.5px solid var(--border);
+    margin: 0.4rem 0;
+  }
+
+  /* ── Callout ──────────────────────────────────────────── */
+  .callout {
+    background: #f0fdfa;
+    border-left: 3px solid var(--teal);
+    padding: 0.45rem 0.6rem;
+    border-radius: 0 0.4rem 0.4rem 0;
+    font-size: 0.9rem;
+    color: var(--navy);
+    font-weight: 600;
+  }
+
+  /* ── Bullet lists ─────────────────────────────────────── */
+  .check-list { list-style: none; padding: 0; }
+  .check-list li {
+    position: relative;
+    padding-left: 1.1rem;
+    font-size: 0.88rem;
+    color: var(--slate-dark);
+    line-height: 1.45;
+    margin-bottom: 0.18rem;
+  }
+  .check-list li::before {
+    content: "\2713";
+    position: absolute;
+    left: 0;
+    color: var(--teal);
+    font-weight: 700;
+    font-size: 0.82rem;
+  }
+
+  /* ── TOC ──────────────────────────────────────────────── */
+  .toc-item {
+    display: flex;
+    align-items: baseline;
+    padding: 0.45rem 0;
+    border-bottom: 1px dotted var(--border);
+    font-size: 1.05rem;
+  }
+  .toc-item:last-child { border-bottom: none; }
+  .toc-num {
+    width: 1.8rem;
+    font-weight: 700;
+    color: var(--teal);
+    flex-shrink: 0;
+  }
+  .toc-title { flex: 1; color: var(--navy); font-weight: 500; }
+  .toc-page { color: var(--slate-light); font-size: 0.95rem; width: 1.5rem; text-align: right; }
+
+  /* ── Cover specific ───────────────────────────────────── */
+  .cover-brand { font-size: 4.2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+  .cover-tagline { font-size: 1.5rem; color: var(--slate); font-weight: 500; margin-top: 0.5rem; }
+  .cover-compliance {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    border: 1.5px solid var(--teal);
+    border-radius: 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--teal);
+    margin-top: 0.6rem;
+    letter-spacing: 0.03em;
+  }
+  .cover-sub {
+    font-size: 1rem;
+    color: var(--slate);
+    margin-top: 1.2rem;
+    line-height: 1.6;
+  }
+
+  /* ── Feature inline ───────────────────────────────────── */
+  .feat-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    margin-bottom: 0.15rem;
+  }
+
+  /* ── Comparison row ───────────────────────────────────── */
+  .compare-bar {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.88rem;
+    color: var(--slate-dark);
+    text-align: center;
+    margin-top: 0.4rem;
+    font-style: italic;
+  }
+
+  /* ── Print ────────────────────────────────────────────── */
+  @media print {
+    html { font-size: 11px; }
+    body { background: #fff; }
+    .slide {
+      width: 100%;
+      height: 100vh;
+      min-height: unset;
+      max-height: unset;
+      padding: 0.65in 0.75in 0.6in;
+    }
+    .slide + .slide { page-break-before: always; }
+    @page { size: letter portrait; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ PAGE 1: COVER ═══════════════════════════ -->
+<section class="slide" style="justify-content: center; align-items: center; text-align: center;">
+  <div class="slide-content flex-col" style="justify-content: center; align-items: center; display: flex;">
+    <div style="margin-bottom: 2rem;">
+      <div style="width: 3.5rem; height: 3.5rem; background: linear-gradient(135deg, var(--blue), var(--teal)); border-radius: 0.7rem; margin: 0 auto 1.2rem;"></div>
+      <div class="cover-brand">
+        <span class="text-blue">Recover</span><span class="text-teal">Journey</span>
+      </div>
+      <div class="cover-tagline">AI-Powered Recovery Management Platform</div>
+      <div class="cover-compliance">HIPAA &amp; 42 CFR Part 2 Compliant</div>
+      <div class="cover-sub">
+        Desktop Portal for Clinicians. Mobile App for Patients.<br>
+        One Connected Ecosystem.
+      </div>
+    </div>
+  </div>
+  <div class="page-footer-left">Confidential</div>
+  <div class="page-number">recoverjourney.com</div>
+</section>
+
+<!-- ═══════════════════════════ PAGE 2: TABLE OF CONTENTS ═══════════════ -->
+<section class="slide">
+  <div class="slide-content">
+    <h2 style="margin-bottom: 1.2rem;">Contents</h2>
+    <div style="max-width: 5.5in;">
+      <div class="toc-item"><span class="toc-num">1.</span><span class="toc-title">The Challenge</span><span class="toc-page">3</span></div>
+      <div class="toc-item"><span class="toc-num">2.</span><span class="toc-title">The Solution</span><span class="toc-page">4</span></div>
+      <div class="toc-item"><span class="toc-num">3.</span><span class="toc-title">AI Relapse Risk Prediction</span><span class="toc-page">5</span></div>
+      <div class="toc-item"><span class="toc-num">4.</span><span class="toc-title">Clinician Portal &mdash; Journey</span><span class="toc-page">6</span></div>
+      <div class="toc-item"><span class="toc-num">5.</span><span class="toc-title">Patient Companion App &mdash; Recover</span><span class="toc-page">7</span></div>
+      <div class="toc-item"><span class="toc-num">6.</span><span class="toc-title">What Sets Us Apart</span><span class="toc-page">8</span></div>
+      <div class="toc-item"><span class="toc-num">7.</span><span class="toc-title">Compliance &amp; Security</span><span class="toc-page">9</span></div>
+      <div class="toc-item"><span class="toc-num">8.</span><span class="toc-title">How It Works</span><span class="toc-page">10</span></div>
+      <div class="toc-item"><span class="toc-num">9.</span><span class="toc-title">Platform at a Glance</span><span class="toc-page">11</span></div>
+      <div class="toc-item"><span class="toc-num">10.</span><span class="toc-title">Next Steps</span><span class="toc-page">12</span></div>
+    </div>
+  </div>
+  <div class="page-footer-left">RecoverJourney</div>
+  <div class="page-number">2</div>
+</section>
+
+<!-- ═══════════════════════════ PAGE 3: THE CHALLENGE ═══════════════════ -->
+<section class="slide">
+  <div class="slide-content">
+    <h2>The Challenge</h2>
+    <p class="section-intro" style="margin-bottom: 0.7rem;">
+      Substance abuse treatment facilities face four systemic problems that undermine patient outcomes and operational efficiency.
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: 0.55rem;">
+
+      <div class="card" style="display: flex; gap: 0.55rem; align-items: flex-start;">
+        <div class="icon-dot icon-dot-red" style="margin-top: 0.1rem;">!</div>
+        <div>
+          <h3>Reactive, Not Predictive</h3>
+          <p>Most facilities only learn about relapse risk after it happens. Staff respond to crises instead of preventing them. By the time warning signs are noticed, the window for early intervention has closed.</p>
+        </div>
+      </div>
+
+      <div class="card" style="display: flex; gap: 0.55rem; align-items: flex-start;">
+        <div class="icon-dot icon-dot-amber" style="margin-top: 0.1rem;">&#8644;</div>
+        <div>
+          <h3>Disconnected Systems</h3>
+          <p>Patient data lives in paper forms, spreadsheets, separate EHRs, and text messages. Nothing talks to each other. Staff waste hours re-entering data and hunting for information across fragmented tools.</p>
+        </div>
+      </div>
+
+      <div class="card" style="display: flex; gap: 0.55rem; align-items: flex-start;">
+        <div class="icon-dot icon-dot-navy" style="margin-top: 0.1rem;">&#9676;</div>
+        <div>
+          <h3>Patient Disengagement</h3>
+          <p>Between sessions, patients have no structured way to track progress, practice skills, or communicate with their care team. The critical hours between appointments are unsupported.</p>
+        </div>
+      </div>
+
+      <div class="card" style="display: flex; gap: 0.55rem; align-items: flex-start;">
+        <div class="icon-dot icon-dot-teal" style="margin-top: 0.1rem;">&#9670;</div>
+        <div>
+          <h3>Compliance Burden</h3>
+          <p>HIPAA and 42 CFR Part 2 compliance requires extensive documentation, audit trails, and secure communication. Most facilities handle this manually, increasing cost and error risk.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div class="page-footer-left">RecoverJourney</div>
+  <div class="page-number">3</div>
+</section>
+
+<!-- ═══════════════════════════ PAGE 4: THE SOLUTION ════════════════════ -->
+<section class="slide">
+  <div class="slide-content">
+    <h2>The Solution</h2>
+    <p class="section-intro" style="margin-bottom: 0.6rem;">
+      RecoverJourney is the first recovery management platform that combines AI-powered relapse prediction, real-time patient engagement, and clinical workflow automation &mdash; all built on a HIPAA-compliant foundation.
+    </p>
+
+    <div class="grid-2-wide" style="margin-bottom: 0.55rem;">
+      <!-- Journey -->
+      <div class="card" style="border-top: 3px solid var(--blue);">
+        <div style="display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.3rem;">
+          <div class="icon-dot icon-dot-blue">&#9634;</div>
+          <h3 style="margin-bottom: 0;"><span class="text-blue">Journey</span> &mdash; Clinician Portal</h3>
+        </div>
+        <ul class="check-list">
+          <li>Real-time facility dashboard with census and alerts</li>
+          <li>Patient management and intake workflow</li>
+          <li>HIPAA-compliant secure messaging</li>
+          <li>Treatment plan builder with phase tracking</li>
+          <li>14 clinical form templates with smart form-fill</li>
+          <li>Appointment scheduling and calendar</li>
+          <li>Comprehensive audit logging</li>
+        </ul>
+      </div>
+
+      <!-- Recover -->
+      <div class="card" style="border-top: 3px solid var(--teal);">
+        <div style="display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.3rem;">
+          <div class="icon-dot icon-dot-teal">&#9743;</div>
+          <h3 style="margin-bottom: 0;"><span class="text-teal">Recover</span> &mdash; Patient App</h3>
+        </div>
+        <ul class="check-list">
+          <li>Dual progress tracking (sobriety + streak)</li>
+          <li>Daily mood check-ins with HALT assessment</li>
+          <li>AI relapse risk prediction</li>
+          <li>12-step digital work tracker</li>
+          <li>7 evidence-based skill modules</li>
+          <li>40+ achievement badges</li>
+          <li>Emergency support with crisis protocols</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card-accent" style="text-align: center;">
+      <p style="color: var(--navy); font-weight: 600; font-size: 0.92rem;">
+        Both apps connect through a secure backend. When a patient checks in on their phone, clinicians see it instantly on their dashboard.
+      </p>
+    </div>
+  </div>
+  <div class="page-footer-left">RecoverJourney</div>
+  <div class="page-number">4</div>
+</section>
+
+<!-- ═══════════════════════════ PAGE 5: AI PREDICTION ═══════════════════ -->
+<section class="slide">
+  <div class="slide-content">
+    <h2>AI Relapse Risk Prediction</h2>
+    <p class="subtitle">The feature that sets RecoverJourney apart</p>
+    <p class="section-intro" style="margin-bottom: 0.5rem;">
+      Our proprietary algorithm analyzes behavioral patterns to predict relapse risk 3&ndash;7 days before it happens, giving care teams time to intervene proactively.
+    </p>
+
+    <div class="grid-2-wide" style="margin-bottom: 0.45rem;">
+      <div>
+        <h4 style="margin-bottom: 0.25rem; color: var(--teal);">What It Analyzes</h4>
+        <div class="grid-2" style="gap: 0.25rem;">
+          <div class="card-alt" style="padding: 0.3rem 0.4rem;"><p style="font-size: 0.82rem;">&#x25B8; Check-in frequency decline</p></div>
+          <div class="card-alt" style="padding: 0.3rem 0.4rem;"><p style="font-size: 0.82rem;">&#x25B8; Mood trends and patterns</p></div>
+          <div class="card-alt" style="padding: 0.3rem 0.4rem;"><p style="font-size: 0.82rem;">&#x25B8; Craving intensity &amp; frequency</p></div>
+          <div class="card-alt" style="padding: 0.3rem 0.4rem;"><p style="font-size: 0.82rem;">&#x25B8; HALT scores</p></div>
+          <div class="card-alt" style="padding: 0.3rem 0.4rem;"><p style="font-size: 0.82rem;">&#x25B8; Meeting attendance patterns</p></div>
+          <div class="card-alt" style="padding: 0.3rem 0.4rem;"><p style="font-size: 0.82rem;">&#x25B8; Social isolation indicators</p></div>
+        </div>
+      </div>
+
+      <div>
+        <h4 style="margin-bottom: 0.25rem; color: var(--teal);">What It Outputs</h4>
+        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+          <div class="card-alt" style="padding: 0.3rem 0.4rem;">
+            <p style="font-size: 0.82rem;"><strong>Risk Score (0&ndash;100)</strong> with confidence level</p>
+          </div>
+          <div class="card-alt" style="padding: 0.3rem 0.4rem;">
+            <p style="font-size: 0.82rem;"><strong>Key Warnings</strong> with specific risk factors identified</p>
+          </div>
+          <div class="card-alt" style="padding: 0.3rem 0.4rem;">
+            <p style="font-size: 0.82rem;"><strong>10+ Ranked Interventions</strong> prioritized by effectiveness</p>
+          </div>
+          <div class="card-alt" style="padding: 0.3rem 0.4rem;">
+            <p style="font-size: 0.82rem;"><strong>Predicted Timeframe</strong> for peak risk window</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      No other recovery platform predicts relapse risk. Most apps only track sobriety milestones after the fact.
+    </div>
+  </div>
+  <div class="page-footer-left">RecoverJourney</div>
+  <div class="page-number">5</div>
+</section>
+
+<!-- ═══════════════════════════ PAGE 6: JOURNEY PORTAL ══════════════════ -->
+<section class="slide">
+  <div class="slide-content">
+    <h2><span class="text-blue">Journey</span> &mdash; Clinician Portal</h2>
+    <p class="subtitle">A comprehensive desktop application for facility management</p>
+
+    <div class="grid-2-wide" style="gap: 0.45rem;">
+
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.15rem;">
+          <div class="icon-dot icon-dot-blue">&#9638;</div>
+          <h3 style="margin-bottom: 0;">Facility Dashboard</h3>
+        </div>
+        <p>Real-time census, today's check-ins, active alerts, upcoming appointments, and recent messages &mdash; everything you need to start your day.</p>
+      </div>
+
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.15rem;">
+          <div class="icon-dot icon-dot-blue">&#9823;</div>
+          <h3 style="margin-bottom: 0;">Patient Management</h3>
+        </div>
+        <p>Searchable patient records with status tracking, registration key generation, intake workflows, and discharge management.</p>
+      </div>
+
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.15rem;">
+          <div class="icon-dot icon-dot-blue">&#9993;</div>
+          <h3 style="margin-bottom: 0;">Secure Messaging</h3>
+        </div>
+        <p>HIPAA-compliant WebSocket messaging with full audit trail. Every message logged with sender, recipient, timestamp, and delivery status.</p>
+      </div>
+
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.15rem;">
+          <div class="icon-dot icon-dot-blue">&#9776;</div>
+          <h3 style="margin-bottom: 0;">Treatment Plan Builder</h3>
+        </div>
+        <p>Multi-phase treatment plans with goal tracking, intervention scheduling, and patient enrollment management.</p>
+      </div>
+
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.15rem;">
+          <div class="icon-dot icon-dot-blue">&#9998;</div>
+          <h3 style="margin-bottom: 0;">Clinical Documents</h3>
+        </div>
+        <p>14 form templates with smart form-fill technology. Paper underscores become digital fields. Checkboxes become real checkboxes.</p>
+      </div>
+
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.15rem;">
+          <div class="icon-dot icon-dot-blue">&#128197;</div>
+          <h3 style="margin-bottom: 0;">Appointment Scheduling</h3>
+        </div>
+        <p>Weekly calendar view with program management, appointment types, and real-time sync with the patient mobile app.</p>
+      </div>
+
+    </div>
+
+    <p style="font-size: 0.82rem; color: var(--slate-light); margin-top: 0.4rem; text-align: center;">
+      See full screenshots at recoverjourney.com/journey-portal
+    </p>
+  </div>
+  <div class="page-footer-left">RecoverJourney</div>
+  <div class="page-number">6</div>
+</section>
+
+<!-- ═══════════════════════════ PAGE 7: RECOVER APP ═════════════════════ -->
+<section class="slide">
+  <div class="slide-content">
+    <h2><span class="text-teal">Recover</span> &mdash; Patient Companion App</h2>
+    <p class="subtitle">Keeping patients engaged between sessions</p>
+
+    <div class="grid-2-wide" style="gap: 0.35rem;">
+
+      <div class="card" style="padding: 0.35rem 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.1rem;">
+          <div class="icon-dot icon-dot-teal" style="width: 1.4rem; height: 1.4rem; font-size: 0.75rem;">&#9650;</div>
+          <h3 style="margin-bottom: 0; font-size: 1.05rem;">Dual Progress Tracking</h3>
+        </div>
+        <p style="font-size: 0.82rem;">Sobriety day counter and check-in streak with milestone celebrations and money saved calculator.</p>
+      </div>
+
+      <div class="card" style="padding: 0.35rem 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.1rem;">
+          <div class="icon-dot icon-dot-teal" style="width: 1.4rem; height: 1.4rem; font-size: 0.75rem;">&#9745;</div>
+          <h3 style="margin-bottom: 0; font-size: 1.05rem;">Daily Check-Ins</h3>
+        </div>
+        <p style="font-size: 0.82rem;">Mood tracking, personal notes, and HALT assessment (Hungry, Angry, Lonely, Tired) synced to clinician dashboard.</p>
+      </div>
+
+      <div class="card" style="padding: 0.35rem 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.1rem;">
+          <div class="icon-dot icon-dot-teal" style="width: 1.4rem; height: 1.4rem; font-size: 0.75rem;">&#9733;</div>
+          <h3 style="margin-bottom: 0; font-size: 1.05rem;">AI Risk Prediction</h3>
+        </div>
+        <p style="font-size: 0.82rem;">Personalized risk scores with warnings, ranked interventions, and timeframe projections delivered directly to the patient.</p>
+      </div>
+
+      <div class="card" style="padding: 0.35rem 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.1rem;">
+          <div class="icon-dot icon-dot-teal" style="width: 1.4rem; height: 1.4rem; font-size: 0.75rem;">&#9998;</div>
+          <h3 style="margin-bottom: 0; font-size: 1.05rem;">12-Step Work Tracker</h3>
+        </div>
+        <p style="font-size: 0.82rem;">Digital step-by-step progress with reflections, exercises, and sponsor notes. The first platform to digitize the process.</p>
+      </div>
+
+      <div class="card" style="padding: 0.35rem 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.1rem;">
+          <div class="icon-dot icon-dot-teal" style="width: 1.4rem; height: 1.4rem; font-size: 0.75rem;">&#9881;</div>
+          <h3 style="margin-bottom: 0; font-size: 1.05rem;">7 Skill Modules</h3>
+        </div>
+        <p style="font-size: 0.82rem;">Evidence-based coping strategies covering mindfulness, cognitive restructuring, trigger management, and more.</p>
+      </div>
+
+      <div class="card" style="padding: 0.35rem 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.1rem;">
+          <div class="icon-dot icon-dot-teal" style="width: 1.4rem; height: 1.4rem; font-size: 0.75rem;">&#9734;</div>
+          <h3 style="margin-bottom: 0; font-size: 1.05rem;">40+ Achievement Badges</h3>
+        </div>
+        <p style="font-size: 0.82rem;">Gamified milestones across 6 categories that celebrate progress and maintain long-term motivation.</p>
+      </div>
+
+      <div class="card" style="padding: 0.35rem 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.1rem;">
+          <div class="icon-dot icon-dot-red" style="width: 1.4rem; height: 1.4rem; font-size: 0.75rem;">&#9888;</div>
+          <h3 style="margin-bottom: 0; font-size: 1.05rem;">Emergency Support</h3>
+        </div>
+        <p style="font-size: 0.82rem;">4 crisis intervention protocols, 7 hotline numbers, grounding exercises, and quick-dial to sponsors and therapists.</p>
+      </div>
+
+      <div class="card" style="padding: 0.35rem 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.1rem;">
+          <div class="icon-dot icon-dot-teal" style="width: 1.4rem; height: 1.4rem; font-size: 0.75rem;">&#9829;</div>
+          <h3 style="margin-bottom: 0; font-size: 1.05rem;">Wellness Tracking</h3>
+        </div>
+        <p style="font-size: 0.82rem;">Sleep quality, medication adherence, exercise logging, and nutrition tracking for holistic recovery support.</p>
+      </div>
+
+    </div>
+
+    <p style="font-size: 0.82rem; color: var(--slate-light); margin-top: 0.3rem; text-align: center;">
+      See full screenshots at recoverjourney.com/recover-app
+    </p>
+  </div>
+  <div class="page-footer-left">RecoverJourney</div>
+  <div class="page-number">7</div>
+</section>
+
+<!-- ═══════════════════════════ PAGE 8: DIFFERENTIATORS ═════════════════ -->
+<section class="slide">
+  <div class="slide-content">
+    <h2>What Sets Us Apart</h2>
+    <p class="section-intro" style="margin-bottom: 0.5rem;">
+      Six features that no other recovery platform offers.
+    </p>
+
+    <div class="grid-2-wide" style="gap: 0.4rem;">
+
+      <div class="card">
+        <h3 style="color: var(--teal);">&#9684; Traffic Light System</h3>
+        <p>Patients build their own Green/Yellow/Red zone action plans. Green for daily maintenance, Yellow for warning signs, Red for crisis response &mdash; with quick-dial to sponsors and therapists.</p>
+      </div>
+
+      <div class="card">
+        <h3 style="color: var(--teal);">&#9998; 12-Step Digital Work</h3>
+        <p>Full step-by-step progress tracking with reflections, exercises, and sponsor notes. The first platform to digitize the 12-step process.</p>
+      </div>
+
+      <div class="card">
+        <h3 style="color: var(--teal);">&#9733; Money Saved Calculator</h3>
+        <p>Show patients the tangible financial benefit of sobriety. Configurable cost-per-day tracks cumulative savings &mdash; real motivation beyond milestones.</p>
+      </div>
+
+      <div class="card">
+        <h3 style="color: var(--teal);">&#9888; 4 Crisis Protocols</h3>
+        <p>Not just hotline numbers. Four structured protocols: Immediate Urge, High-Risk Situation, Emotional Crisis, and Trigger Management &mdash; each with timed steps and grounding exercises.</p>
+      </div>
+
+      <div class="card">
+        <h3 style="color: var(--teal);">&#9634; Smart Form-Fill</h3>
+        <p>14 templates that convert paper underscores into proper digital fields. Checkboxes become real checkboxes. Dates become date inputs. No more broken formatting.</p>
+      </div>
+
+      <div class="card">
+        <h3 style="color: var(--teal);">&#9673; Offline-First Privacy</h3>
+        <p>Patient data stays on their device by default. No cloud dependency. No data collection. Optional sync when they choose. HIPAA-compliant by architecture, not just policy.</p>
+      </div>
+
+    </div>
+
+    <div class="compare-bar">
+      Unlike platforms that serve all behavioral health broadly, RecoverJourney is built specifically for substance abuse treatment.
+    </div>
+  </div>
+  <div class="page-footer-left">RecoverJourney</div>
+  <div class="page-number">8</div>
+</section>
+
+<!-- ═══════════════════════════ PAGE 9: COMPLIANCE ══════════════════════ -->
+<section class="slide">
+  <div class="slide-content">
+    <h2>Built for Compliance from Day One</h2>
+    <p class="subtitle">Not bolted on after the fact</p>
+
+    <div class="grid-2-wide" style="gap: 0.4rem; margin-bottom: 0.35rem;">
+
+      <div class="card" style="border-left: 3px solid var(--teal);">
+        <h3>HIPAA Privacy &amp; Security Rule</h3>
+        <p>Full administrative, physical, and technical safeguards. Access controls, audit trails, transmission security, and data integrity &mdash; all built into the platform architecture.</p>
+      </div>
+
+      <div class="card" style="border-left: 3px solid var(--teal);">
+        <h3>42 CFR Part 2</h3>
+        <p>Substance use disorder confidentiality requirements met at every level. Consent tracking, re-disclosure prohibition, and separate access controls for SUD-specific data.</p>
+      </div>
+
+      <div class="card" style="border-left: 3px solid var(--teal);">
+        <h3>Data Encryption</h3>
+        <p>AES-256 encryption at rest. TLS 1.3 for all data in transit. WebSocket connections encrypted end-to-end. Certificate pinning for mobile applications.</p>
+      </div>
+
+      <div class="card" style="border-left: 3px solid var(--teal);">
+        <h3>Audit Logging</h3>
+        <p>Every PHI access logged with user, timestamp, action, resource, and fields viewed. Immutable records with batch-queued logging and immediate dispatch for critical events.</p>
+      </div>
+
+    </div>
+
+    <h4 style="margin-bottom: 0.2rem; color: var(--navy);">Additional Security Features</h4>
+    <div class="grid-3" style="gap: 0.25rem; margin-bottom: 0.3rem;">
+      <div class="card-alt" style="padding: 0.25rem 0.4rem;"><p style="font-size: 0.8rem;">&#10003; 15-min session timeout with 2-min warning</p></div>
+      <div class="card-alt" style="padding: 0.25rem 0.4rem;"><p style="font-size: 0.8rem;">&#10003; Tokens stored in memory only</p></div>
+      <div class="card-alt" style="padding: 0.25rem 0.4rem;"><p style="font-size: 0.8rem;">&#10003; Two-factor authentication</p></div>
+      <div class="card-alt" style="padding: 0.25rem 0.4rem;"><p style="font-size: 0.8rem;">&#10003; Role-based access control (3 tiers)</p></div>
+      <div class="card-alt" style="padding: 0.25rem 0.4rem;"><p style="font-size: 0.8rem;">&#10003; Input sanitization via DOMPurify</p></div>
+      <div class="card-alt" style="padding: 0.25rem 0.4rem;"><p style="font-size: 0.8rem;">&#10003; BAA available for covered entities</p></div>
+    </div>
+
+    <div class="callout" style="text-align: center;">
+      805 automated tests ensure reliability across the entire platform.
+    </div>
+  </div>
+  <div class="page-footer-left">RecoverJourney</div>
+  <div class="page-number">9</div>
+</section>
+
+<!-- ═══════════════════════════ PAGE 10: HOW IT WORKS ═══════════════════ -->
+<section class="slide">
+  <div class="slide-content">
+    <h2>How It Works</h2>
+    <p class="subtitle">Up and running in days, not months</p>
+
+    <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 0.8rem;">
+
+      <div style="display: flex; gap: 0.7rem; align-items: flex-start;">
+        <div class="step-circle">1</div>
+        <div style="flex: 1;">
+          <h3 style="font-size: 1.25rem;">Deploy &amp; Configure</h3>
+          <p style="font-size: 0.95rem; color: var(--slate); line-height: 1.55;">
+            Set up your facility, configure roles and departments, import your patient list. No month-long implementations or IT overhead. Docker-based deployment with zero-downtime updates.
+          </p>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div style="display: flex; gap: 0.7rem; align-items: flex-start;">
+        <div class="step-circle">2</div>
+        <div style="flex: 1;">
+          <h3 style="font-size: 1.25rem;">Connect Your Patients</h3>
+          <p style="font-size: 0.95rem; color: var(--slate); line-height: 1.55;">
+            Each patient receives a unique registration key. They download the Recover app and connect to your facility securely. No personal email or phone number required for signup.
+          </p>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div style="display: flex; gap: 0.7rem; align-items: flex-start;">
+        <div class="step-circle">3</div>
+        <div style="flex: 1;">
+          <h3 style="font-size: 1.25rem;">Monitor &amp; Intervene</h3>
+          <p style="font-size: 0.95rem; color: var(--slate); line-height: 1.55;">
+            Track recovery progress in real time, receive AI risk alerts before crises develop, message patients directly through secure channels, and document everything &mdash; all HIPAA-compliant from day one.
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card-accent" style="margin-top: 0.8rem; text-align: center;">
+      <p style="font-size: 0.95rem; color: var(--navy); font-weight: 600;">
+        From signup to first patient check-in: typically under one week.
+      </p>
+    </div>
+  </div>
+  <div class="page-footer-left">RecoverJourney</div>
+  <div class="page-number">10</div>
+</section>
+
+<!-- ═══════════════════════════ PAGE 11: PLATFORM AT A GLANCE ═══════════ -->
+<section class="slide">
+  <div class="slide-content">
+    <h2>Platform at a Glance</h2>
+    <p class="section-intro" style="margin-bottom: 0.7rem;">
+      A comprehensive recovery management ecosystem built with modern, proven technologies.
+    </p>
+
+    <div class="grid-4" style="gap: 0.45rem; margin-bottom: 0.6rem;">
+      <div class="stat-box">
+        <div class="stat-number">14</div>
+        <div class="stat-label">Clinical Form<br>Templates</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">40+</div>
+        <div class="stat-label">Achievement<br>Badges</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">7</div>
+        <div class="stat-label">Evidence-Based<br>Skill Modules</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">4</div>
+        <div class="stat-label">Crisis Intervention<br>Protocols</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">12</div>
+        <div class="stat-label">Steps Digitally<br>Tracked</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">3</div>
+        <div class="stat-label">Staff Role<br>Levels</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">805</div>
+        <div class="stat-label">Automated<br>Tests</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">100%</div>
+        <div class="stat-label">Offline<br>Capable</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding: 0.55rem 0.65rem;">
+      <h4 style="margin-bottom: 0.2rem; color: var(--teal);">Technology Stack</h4>
+      <p style="font-size: 0.9rem; line-height: 1.55;">
+        Built with <strong>React</strong>, <strong>Electron</strong>, <strong>Fastify</strong>, <strong>PostgreSQL</strong>, and <strong>Capacitor</strong>.
+        TypeScript end-to-end with Zod runtime validation. Prisma ORM for type-safe database access.
+        Zustand for state management. Vitest and Playwright for testing.
+        Deployed via Docker with zero-downtime updates and automated CI/CD through GitHub Actions.
+      </p>
+    </div>
+
+    <div class="grid-3" style="gap: 0.35rem; margin-top: 0.45rem;">
+      <div class="card-alt" style="text-align: center; padding: 0.35rem;">
+        <h4 style="font-size: 0.9rem; color: var(--blue); margin-bottom: 0.1rem;">Journey</h4>
+        <p style="font-size: 0.8rem;">Electron Desktop App<br>React + Zustand + React Query</p>
+      </div>
+      <div class="card-alt" style="text-align: center; padding: 0.35rem;">
+        <h4 style="font-size: 0.9rem; color: var(--navy); margin-bottom: 0.1rem;">Backend</h4>
+        <p style="font-size: 0.8rem;">Fastify REST API + WebSocket<br>Prisma + PostgreSQL</p>
+      </div>
+      <div class="card-alt" style="text-align: center; padding: 0.35rem;">
+        <h4 style="font-size: 0.9rem; color: var(--teal); margin-bottom: 0.1rem;">Recover</h4>
+        <p style="font-size: 0.8rem;">React + Capacitor 7<br>iOS &amp; Android Native</p>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer-left">RecoverJourney</div>
+  <div class="page-number">11</div>
+</section>
+
+<!-- ═══════════════════════════ PAGE 12: NEXT STEPS ═════════════════════ -->
+<section class="slide" style="justify-content: center;">
+  <div class="slide-content" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+
+    <h2 style="font-size: 2.4rem; margin-bottom: 0.3rem;">Next Steps</h2>
+    <p style="font-size: 1.15rem; color: var(--slate); margin-bottom: 1.5rem; max-width: 5in;">
+      We'd love to show you RecoverJourney in action.
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; text-align: left; width: 4.5in;">
+      <div class="card" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.7rem;">
+        <div class="icon-dot icon-dot-teal">@</div>
+        <div>
+          <div style="font-size: 0.82rem; color: var(--slate-light);">Email</div>
+          <div style="font-size: 1rem; font-weight: 600; color: var(--navy);">hello@recoverjourney.com</div>
+        </div>
+      </div>
+      <div class="card" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.7rem;">
+        <div class="icon-dot icon-dot-blue">&#9741;</div>
+        <div>
+          <div style="font-size: 0.82rem; color: var(--slate-light);">Website</div>
+          <div style="font-size: 1rem; font-weight: 600; color: var(--navy);">recoverjourney.com</div>
+        </div>
+      </div>
+      <div class="card" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.7rem;">
+        <div class="icon-dot icon-dot-teal">&#9993;</div>
+        <div>
+          <div style="font-size: 0.82rem; color: var(--slate-light);">Schedule a Consultation</div>
+          <div style="font-size: 1rem; font-weight: 600; color: var(--navy);">recoverjourney.com/contact</div>
+        </div>
+      </div>
+    </div>
+
+    <p style="font-size: 0.95rem; color: var(--slate); margin-bottom: 1.5rem;">
+      Available for live demos, pilot programs, and custom enterprise deployments.
+    </p>
+
+    <hr class="divider" style="width: 3in; margin-bottom: 0.8rem;">
+
+    <div style="margin-bottom: 0.4rem;">
+      <span style="font-size: 1.3rem; font-weight: 800;">
+        <span class="text-blue">Recover</span><span class="text-teal">Journey</span>
+      </span>
+    </div>
+    <p style="font-size: 1rem; color: var(--navy); font-weight: 600;">
+      Predict Relapse Before It Happens
+    </p>
+  </div>
+  <div class="page-footer-left">Confidential. All rights reserved.</div>
+  <div class="page-number">12</div>
+</section>
+
+</body>
+</html>

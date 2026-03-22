@@ -5,6 +5,12 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-03-21
+
+### Added
+- 12-page pitch deck (docs/pitchdeck.html) — print-ready sales handout with cover, table of contents, problem/solution, AI prediction, app features, differentiators, compliance, implementation, and contact info
+- Markdown version (docs/pitchdeck.md) for reference
+
 ## [1.6.0] - 2026-03-21
 
 ### Added
