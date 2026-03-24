@@ -97,7 +97,7 @@
     "autoprefixer": "^10.4.20",
     "esbuild": "^0.25.0",
     "jsdom": "^27.2.0",
-    "pnpm": "^10.15.1",
+    "pnpm": "^10.32.1",
     "postcss": "^8.4.47",
     "prettier": "^3.6.2",
     "react-router-dom": "^7.9.6",
