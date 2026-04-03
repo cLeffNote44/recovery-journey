@@ -1,4 +1,4 @@
-import { useState, useRef, lazy, Suspense } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { useAppData } from '@/hooks/useAppData';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -62,11 +62,11 @@ export function SettingsScreen() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check notification permission on mount
-  useState(() => {
+  useEffect(() => {
     if (isNative()) {
       checkNotificationPermission().then(setHasNotificationPermission);
     }
-  });
+  }, []);
 
   const handleNotificationToggle = async (enabled: boolean) => {
     if (enabled && isNative() && !hasNotificationPermission) {
@@ -138,29 +138,30 @@ export function SettingsScreen() {
   };
 
   const handleRestoreAutoBackup = (key: string) => {
-    if (!confirm('This will replace all your current data with the backup. Continue?')) {
-      return;
-    }
-
-    const result = restoreAutoBackup(key);
-
-    if (result.success && result.data) {
-      localStorage.setItem('recovery_journey_data', JSON.stringify(result.data));
-      toast.success('Data restored successfully! Refreshing... 🔄');
-      setTimeout(() => window.location.reload(), 1000);
-    } else {
-      toast.error(result.errors?.join(', ') || 'Failed to restore backup');
-    }
+    setConfirmAction({
+      message: 'This will replace all your current data with the backup. Continue?',
+      action: () => {
+        const result = restoreAutoBackup(key);
+        if (result.success && result.data) {
+          localStorage.setItem('recovery_journey_data', JSON.stringify(result.data));
+          toast.success('Data restored successfully! Refreshing... 🔄');
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          toast.error(result.errors?.join(', ') || 'Failed to restore backup');
+        }
+      }
+    });
   };
 
   const handleDeleteAutoBackup = (key: string) => {
-    if (!confirm('Delete this auto backup?')) {
-      return;
-    }
-
-    deleteAutoBackup(key);
-    setAutoBackups(getAutoBackups());
-    toast.success('Auto backup deleted');
+    setConfirmAction({
+      message: 'Delete this auto backup?',
+      action: () => {
+        deleteAutoBackup(key);
+        setAutoBackups(getAutoBackups());
+        toast.success('Auto backup deleted');
+      }
+    });
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,12 +212,17 @@ export function SettingsScreen() {
 
     setIsImporting(true);
 
-    // Save the imported data to localStorage
-    const { version, exportDate, appVersion, ...appData } = importPreview;
-    localStorage.setItem('recovery_journey_data', JSON.stringify(appData));
+    try {
+      // Save the imported data to localStorage
+      const { version, exportDate, appVersion, ...appData } = importPreview;
+      localStorage.setItem('recovery_journey_data', JSON.stringify(appData));
 
-    toast.success('Data restored successfully! Refreshing... 🔄');
-    setTimeout(() => window.location.reload(), 1000);
+      toast.success('Data restored successfully! Refreshing... 🔄');
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error) {
+      toast.error('Failed to import data. Storage may be full.');
+      setIsImporting(false);
+    }
   };
 
   const handleCancelImport = () => {
@@ -224,26 +230,29 @@ export function SettingsScreen() {
     setImportPreview(null);
   };
 
-  const handleClearData = async () => {
-    if (
-      confirm(
-        'Are you sure you want to delete all your data? This action cannot be undone. Consider exporting your data first.'
-      )
-    ) {
-      setIsClearing(true);
-      // Simulate slight delay for UX
-      await new Promise(resolve => setTimeout(resolve, 300));
-      localStorage.removeItem('recovery_journey_data');
-      toast.success('All data cleared. Refreshing...');
-      setTimeout(() => window.location.reload(), 1000);
-    }
+  const [confirmAction, setConfirmAction] = useState<{ message: string; action: () => void } | null>(null);
+
+  const handleClearData = () => {
+    setConfirmAction({
+      message: 'Are you sure you want to delete all your data? This action cannot be undone.',
+      action: async () => {
+        setIsClearing(true);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        localStorage.removeItem('recovery_journey_data');
+        toast.success('All data cleared. Refreshing...');
+        setTimeout(() => window.location.reload(), 1000);
+      }
+    });
   };
 
   const handleResetOnboarding = () => {
-    if (confirm('Reset onboarding? You\'ll be taken through the setup again.')) {
-      setOnboardingCompleted(false);
-      toast.success('Onboarding reset');
-    }
+    setConfirmAction({
+      message: 'Reset onboarding? You\'ll be taken through the setup again.',
+      action: () => {
+        setOnboardingCompleted(false);
+        toast.success('Onboarding reset');
+      }
+    });
   };
 
   const handleCSVExport = (dataType: ExportDataType) => {
@@ -305,15 +314,37 @@ export function SettingsScreen() {
   };
 
   const handleRemoveQuote = (quoteId: string) => {
-    if (confirm('Are you sure you want to remove this quote?')) {
-      removeQuote(quoteId);
-      toast.success('Quote removed');
-    }
+    setConfirmAction({
+      message: 'Are you sure you want to remove this quote?',
+      action: () => {
+        removeQuote(quoteId);
+        toast.success('Quote removed');
+      }
+    });
   };
 
   return (
     <div className="space-y-6 pb-20">
       <h2 className="text-2xl font-bold">Settings</h2>
+
+      {/* Confirmation Dialog */}
+      {confirmAction && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                Confirm Action
+              </CardTitle>
+              <CardDescription>{confirmAction.message}</CardDescription>
+            </CardHeader>
+            <CardContent className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setConfirmAction(null)}>Cancel</Button>
+              <Button variant="destructive" onClick={() => { confirmAction.action(); setConfirmAction(null); }}>Confirm</Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Notifications Card */}
       <Card>

@@ -20,7 +20,7 @@ security updates. Users are strongly encouraged to stay on the latest release.
 If you discover a security vulnerability in Recovery Journey, please report it
 responsibly. Do NOT open a public GitHub issue for security vulnerabilities.
 
-**Email:** security@recoveryjourney.com
+**Email:** security@recoveryjourney.app
 
 Please include the following in your report:
 
@@ -76,7 +76,7 @@ The following are generally outside the scope of this security policy:
 
 Recovery Journey follows a coordinated disclosure model:
 
-1. Report the vulnerability privately to security@recoveryjourney.com.
+1. Report the vulnerability privately to security@recoveryjourney.app.
 2. We will acknowledge receipt and work with you to understand and validate
    the issue.
 3. We request a **90-day disclosure window** from the date of our
@@ -97,7 +97,7 @@ Insurance Portability and Accountability Act (HIPAA) and 42 CFR Part 2
 regulations governing substance use disorder patient records.
 
 A **Business Associate Agreement (BAA)** is available for covered entities and
-their business associates. Contact legal@recoveryjourney.com to request BAA
+their business associates. Contact legal@recoveryjourney.app to request BAA
 execution.
 
 ## Security Architecture Overview

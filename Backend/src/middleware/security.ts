@@ -38,7 +38,7 @@ const config = {
   bodyLimit: 1024 * 1024, // 1MB
   // Suspicious patterns
   suspiciousPatterns: [
-    /(\%27)|(\')|(\-\-)|(\%23)|(#)/i, // SQL injection
+    /(%27)|(--)|(%23)|(#)/i, // SQL injection (apostrophes excluded to avoid false positives on names/notes)
     /<script[^>]*>[\s\S]*?<\/script>/gi, // XSS
     /javascript:/gi, // XSS
     /on\w+\s*=/gi, // Event handlers
@@ -48,13 +48,17 @@ const config = {
 }
 
 /**
- * Get client IP address from request
+ * Get client IP address from request.
+ * Only trusts X-Forwarded-For in production behind a known reverse proxy.
  */
 function getClientIP(request: FastifyRequest): string {
-  const forwardedFor = request.headers['x-forwarded-for']
-  if (typeof forwardedFor === 'string') {
-    const firstIP = forwardedFor.split(',')[0]
-    return firstIP?.trim() || request.ip || 'unknown'
+  // Only trust X-Forwarded-For when behind a reverse proxy (production)
+  if (process.env['NODE_ENV'] === 'production' && process.env['TRUST_PROXY'] === 'true') {
+    const forwardedFor = request.headers['x-forwarded-for']
+    if (typeof forwardedFor === 'string') {
+      const firstIP = forwardedFor.split(',')[0]
+      return firstIP?.trim() || request.ip || 'unknown'
+    }
   }
   return request.ip || 'unknown'
 }

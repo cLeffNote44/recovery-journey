@@ -56,10 +56,15 @@ export class CloudEncryption {
       ['deriveBits', 'deriveKey']
     );
 
+    // Generate a unique salt from the password itself + a fixed prefix
+    // This ensures different passwords produce different salts
+    const saltInput = `recovery-journey:${password}`;
+    const saltBuffer = await window.crypto.subtle.digest('SHA-256', encoder.encode(saltInput));
+
     return window.crypto.subtle.deriveKey(
       {
         name: 'PBKDF2',
-        salt: encoder.encode('recovery-journey-salt'), // In production, use unique salt per user
+        salt: new Uint8Array(saltBuffer),
         iterations: 100000,
         hash: 'SHA-256'
       },

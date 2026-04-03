@@ -127,8 +127,13 @@ function generateEntryHash(entry: Omit<AuditLogEntry, 'hash' | 'id'>): string {
     resourceId: entry.resourceId
   })
 
+  const secret = process.env['AUDIT_SECRET']
+  if (!secret) {
+    throw new Error('AUDIT_SECRET environment variable is required for audit log integrity')
+  }
+
   return crypto
-    .createHmac('sha256', process.env['AUDIT_SECRET'] || process.env['JWT_SECRET'] || 'audit-secret')
+    .createHmac('sha256', secret)
     .update(content)
     .digest('hex')
 }

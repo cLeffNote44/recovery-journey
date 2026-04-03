@@ -76,7 +76,7 @@ The system processes the following types of PHI:
 #### Automatic Logoff
 - Session timeout: 15 minutes (production)
 - Configurable via `SESSION_TIMEOUT_MINUTES`
-- JWT tokens expire after 15 minutes
+- Access tokens expire after 1 hour. Client-side inactivity timeout enforces 15-minute automatic logout regardless of token validity.
 
 #### Encryption and Decryption
 - AES-256-GCM for data at rest
@@ -351,7 +351,7 @@ JWT_SECRET=<generate-unique-key>
 JWT_REFRESH_SECRET=<generate-unique-key>
 
 # Session Security
-JWT_EXPIRES_IN=15m
+JWT_EXPIRES_IN=1h
 JWT_REFRESH_EXPIRES_IN=7d
 SESSION_TIMEOUT_MINUTES=15
 

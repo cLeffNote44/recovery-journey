@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Phone, MessageSquare, AlertCircle, Heart, Users, Globe, X, Check, Clock, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,6 +48,16 @@ export function EmergencySupportModal({
   const [selectedExercise, setSelectedExercise] = useState<GroundingExercise | null>(null);
   const [exerciseProgress, setExerciseProgress] = useState(0);
   const [notes, setNotes] = useState('');
+  const exerciseIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup interval on unmount or exercise change
+  useEffect(() => {
+    return () => {
+      if (exerciseIntervalRef.current) {
+        clearInterval(exerciseIntervalRef.current);
+      }
+    };
+  }, []);
 
   const emergencyContacts = getEmergencyContacts(contacts);
   const quickDialNumbers = getQuickDialNumbers();
@@ -98,15 +108,22 @@ export function EmergencySupportModal({
   };
 
   const startGroundingExercise = (exercise: GroundingExercise) => {
+    // Clear any existing exercise interval
+    if (exerciseIntervalRef.current) {
+      clearInterval(exerciseIntervalRef.current);
+    }
+
     setSelectedExercise(exercise);
     setExerciseProgress(0);
     setActiveTab('grounding');
 
-    // Simulate progress
-    const interval = setInterval(() => {
+    exerciseIntervalRef.current = setInterval(() => {
       setExerciseProgress(prev => {
         if (prev >= 100) {
-          clearInterval(interval);
+          if (exerciseIntervalRef.current) {
+            clearInterval(exerciseIntervalRef.current);
+            exerciseIntervalRef.current = null;
+          }
           toast.success('Exercise complete! Well done.');
           return 100;
         }

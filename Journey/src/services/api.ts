@@ -50,18 +50,19 @@ api.interceptors.request.use(
           config.headers.Authorization = `Bearer ${accessToken}`;
           onTokenRefreshed(accessToken);
         } catch {
-          store.logout();
+          store.logout('forced');
           return Promise.reject(new Error('Session expired. Please login again.'));
         } finally {
           isRefreshing = false;
         }
       } else if (isRefreshing) {
         // Wait for token refresh to complete
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
           subscribeTokenRefresh((newToken: string) => {
             config.headers.Authorization = `Bearer ${newToken}`;
             resolve(config);
           });
+          setTimeout(() => reject(new Error('Token refresh timeout')), 10000);
         });
       }
     } else if (token) {
@@ -119,7 +120,7 @@ api.interceptors.response.use(
           return api(originalRequest);
         } catch {
           // Refresh failed, logout user
-          store.logout();
+          store.logout('forced');
           showToast.warning('Your session has expired. Please log in again.');
           return Promise.reject(new Error('Session expired. Please login again.'));
         } finally {

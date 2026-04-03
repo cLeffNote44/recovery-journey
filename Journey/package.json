@@ -112,7 +112,7 @@
     "publish": {
       "provider": "github",
       "owner": "cLeffNote44",
-      "repo": "recover-backend",
+      "repo": "recovery-journey",
       "releaseType": "release"
     }
   },

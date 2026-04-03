@@ -9,7 +9,7 @@ import { useRecoveryStore } from '@/stores/useRecoveryStore';
 import { useJournalStore } from '@/stores/useJournalStore';
 import { useActivitiesStore } from '@/stores/useActivitiesStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { getQuoteOfTheDay } from '@/lib/quotes';
 
 export function useAppData() {
@@ -92,9 +92,10 @@ export function useAppData() {
   const setQuoteSettings = useSettingsStore((state) => state.setQuoteSettings);
 
   // Quote helpers (temporary compatibility)
-  const currentQuote = useMemo(() => getQuoteOfTheDay(), []);
+  const [quoteIndex, setQuoteIndex] = useState(0);
+  const currentQuote = useMemo(() => getQuoteOfTheDay(quoteIndex), [quoteIndex]);
   const refreshQuote = () => {
-    // To be implemented with proper quote rotation
+    setQuoteIndex(prev => prev + 1);
   };
 
   // Helper functions

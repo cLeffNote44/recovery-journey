@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
+import crypto from 'crypto'
 import { nanoid } from 'nanoid'
 import { prisma } from '../lib/prisma.js'
 import { ApiError } from '../lib/error-handler.js'
@@ -498,12 +499,14 @@ export async function patientRoutes(fastify: FastifyInstance) {
 
 function generateRegistrationKey(): string {
   // Generate a user-friendly key: XXXX-XXXX-XXXX (alphanumeric, no confusing chars)
+  // Uses crypto.randomBytes for CSPRNG — Math.random() is predictable
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // No 0, O, I, 1
+  const randomBytes = crypto.randomBytes(12)
   const segments = []
   for (let s = 0; s < 3; s++) {
     let segment = ''
     for (let i = 0; i < 4; i++) {
-      segment += chars[Math.floor(Math.random() * chars.length)]
+      segment += chars[randomBytes[s * 4 + i]! % chars.length]
     }
     segments.push(segment)
   }

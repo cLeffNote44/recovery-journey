@@ -185,6 +185,7 @@ export async function patientSyncRoutes(fastify: FastifyInstance) {
     const patient = request.patientUser!
     let syncedCount = 0
 
+    const errors: string[] = []
     for (const ci of body.checkIns) {
       try {
         const wellnessScore = calculateWellnessScore(ci)
@@ -205,12 +206,12 @@ export async function patientSyncRoutes(fastify: FastifyInstance) {
           }
         })
         syncedCount++
-      } catch {
-        // Skip duplicates or invalid entries
+      } catch (error) {
+        errors.push(`check-in ${ci.date}: ${error instanceof Error ? error.message : 'unknown error'}`)
       }
     }
 
-    return { success: true, syncedCount }
+    return { success: true, syncedCount, errors: errors.length > 0 ? errors : undefined }
   })
 
   /**
@@ -221,6 +222,7 @@ export async function patientSyncRoutes(fastify: FastifyInstance) {
     const body = z.object({ cravings: z.array(cravingSchema) }).parse(request.body)
     const patient = request.patientUser!
     let syncedCount = 0
+    const errors: string[] = []
 
     for (const c of body.cravings) {
       try {
@@ -240,12 +242,12 @@ export async function patientSyncRoutes(fastify: FastifyInstance) {
           }
         })
         syncedCount++
-      } catch {
-        // Skip duplicates or invalid entries
+      } catch (error) {
+        errors.push(`craving ${c.date}: ${error instanceof Error ? error.message : 'unknown error'}`)
       }
     }
 
-    return { success: true, syncedCount }
+    return { success: true, syncedCount, errors: errors.length > 0 ? errors : undefined }
   })
 
   /**

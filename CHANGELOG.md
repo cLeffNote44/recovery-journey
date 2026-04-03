@@ -5,6 +5,49 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-04-03
+
+### Security
+- Registration keys now use `crypto.randomBytes()` instead of `Math.random()` (CSPRNG)
+- WebSocket `broadcastToFacility` now filters by facility — fixes cross-tenant PHI leak
+- `AUDIT_SECRET` no longer falls back to hardcoded string; throws if missing
+- `ENCRYPTION_KEY`/`ENCRYPTION_SALT` added to env schema; removed hardcoded salt fallback
+- `/metrics` endpoint now requires Bearer token authentication
+- `X-Forwarded-For` only trusted when `TRUST_PROXY=true` in production
+- Message read endpoint (`PUT /messages/:id/read`) now verifies ownership
+- Cloud sync PBKDF2 salt is now derived per-password instead of static across all users
+- SQL injection regex no longer false-positives on apostrophes in patient notes
+
+### Fixed
+- `useState` replaced with `useEffect` for notification permission check in SettingsScreen
+- `handleConfirmImport` now has try/catch and properly resets loading state on error
+- `store.logout()` calls in API interceptors now pass `'forced'` reason for HIPAA audit compliance
+- `setInterval` leak in EmergencySupportModal grounding exercises — now cleaned up on unmount
+- Token refresh subscriber queue now has timeout to prevent permanent promise leak
+- Batch sync endpoints now return error details instead of silently swallowing failures
+- `refreshQuote` button now cycles quotes via offset parameter instead of being a no-op
+- `localStorage` read in ThemeContext wrapped in try/catch for environments where storage is blocked
+
+### Changed
+- All `window.confirm()` calls in SettingsScreen replaced with React state-driven confirmation dialog (Capacitor iOS compatible)
+- Contact form now POSTs to `/api/contact` API route with `mailto:` fallback (was `console.log` no-op)
+- Fastify server now uses centralized pino logger from `lib/logger.ts` (single instance)
+- CD workflow deploy steps now use real SSH + docker-compose commands instead of placeholder echoes
+- Journey/README.md rewritten to accurately describe the Electron clinician portal
+- Recover/README.md rewritten to accurately describe the Capacitor patient companion app
+- HIPAA compliance doc corrected: JWT expiry is 1h (with 15-min client-side idle timeout)
+- `.env.example` expanded with HIPAA-critical vars: encryption, audit, session, VITE frontend vars
+- Email domains standardized to `@recoveryjourney.app` across SECURITY.md and LICENSE
+- electron-builder publish repo corrected from `recover-backend` to `recovery-journey`
+- Dependabot reviewer teams updated from placeholder `your-org/*` to `cLeffNote44`
+- Brand logo images now have descriptive `alt` text in website Header and Footer
+- `@types/react` downgraded from ^19.1.16 to ^18.3.18 to match React 18 runtime
+- Removed orphaned `react-router-dom` devDependency from Recover (uses Wouter)
+
+### Added
+- `/api/contact` Next.js API route for website contact/demo request form
+- GitHub Actions secrets for CD pipeline: STAGING_HOST, PRODUCTION_HOST, DEPLOY_USER, DEPLOY_SSH_KEY
+
 ## [1.6.2] - 2026-03-21
 
 ### Changed

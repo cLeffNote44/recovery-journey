@@ -35,6 +35,13 @@ const envSchema = z.object({
 
   // WebSocket
   WS_HEARTBEAT_INTERVAL_MS: z.coerce.number().default(30000),
+
+  // Encryption (required for PHI)
+  ENCRYPTION_KEY: z.string().min(32).optional(),
+  ENCRYPTION_SALT: z.string().optional(),
+
+  // Audit log integrity
+  AUDIT_SECRET: z.string().min(32).optional(),
 })
 
 // Parse and validate

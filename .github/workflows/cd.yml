@@ -176,19 +176,30 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy to staging
+        env:
+          DEPLOY_HOST: ${{ secrets.STAGING_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           echo "Deploying version ${{ needs.setup.outputs.version }} to staging..."
-          # Add your deployment commands here
-          # Examples:
-          # - kubectl apply -f k8s/staging/
-          # - docker-compose -f docker-compose.staging.yml up -d
-          # - aws ecs update-service --cluster staging --service backend --force-new-deployment
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
+            cd /opt/recovery-journey
+            git fetch --tags
+            git checkout ${{ needs.setup.outputs.version }}
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker compose -f docker-compose.prod.yml exec -T backend npx prisma migrate deploy
+          EOF
+          rm -f ~/.ssh/deploy_key
 
       - name: Verify deployment
         run: |
           echo "Verifying staging deployment..."
-          # Add health check verification
-          # curl -f https://staging-api.recoveryjourney.app/health || exit 1
+          sleep 15
+          curl -f https://staging-api.recoveryjourney.app/health || exit 1
 
       - name: Notify deployment success
         if: success()
@@ -219,16 +230,30 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy to production
+        env:
+          DEPLOY_HOST: ${{ secrets.PRODUCTION_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           echo "Deploying version ${{ needs.setup.outputs.version }} to production..."
-          # Add your production deployment commands here
-          # Ensure blue-green or canary deployment strategy
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
+            cd /opt/recovery-journey
+            git fetch --tags
+            git checkout ${{ needs.setup.outputs.version }}
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker compose -f docker-compose.prod.yml exec -T backend npx prisma migrate deploy
+          EOF
+          rm -f ~/.ssh/deploy_key
 
       - name: Verify deployment
         run: |
           echo "Verifying production deployment..."
-          # Add health check verification
-          # curl -f https://api.recoveryjourney.app/health || exit 1
+          sleep 15
+          curl -f https://api.recoveryjourney.app/health || exit 1
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')

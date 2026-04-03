@@ -213,6 +213,21 @@ export async function messageRoutes(fastify: FastifyInstance) {
       throw ApiError.notFound('Message not found')
     }
 
+    // Verify the current user is the intended recipient of this message
+    const staffUser = request.staffUser
+    const patientUser = request.patientUser
+    if (staffUser) {
+      // Staff can only mark patient-sent messages addressed to them
+      if (message.senderType !== 'PATIENT' || message.staffId !== staffUser.id) {
+        throw ApiError.forbidden('Cannot mark this message as read')
+      }
+    } else if (patientUser) {
+      // Patients can only mark staff-sent messages addressed to them
+      if (message.senderType !== 'STAFF' || message.patientId !== patientUser.id) {
+        throw ApiError.forbidden('Cannot mark this message as read')
+      }
+    }
+
     // Update read status
     await prisma.message.update({
       where: { id },

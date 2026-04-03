@@ -36,7 +36,10 @@ function getEncryptionKey(): Buffer {
   }
 
   // Otherwise derive key from passphrase
-  const salt = process.env['ENCRYPTION_SALT'] || 'recovery-journey-default-salt'
+  const salt = process.env['ENCRYPTION_SALT']
+  if (!salt) {
+    throw new Error('ENCRYPTION_SALT environment variable is required when using passphrase-based ENCRYPTION_KEY')
+  }
   return crypto.pbkdf2Sync(key, salt, PBKDF2_ITERATIONS, KEY_LENGTH, 'sha512')
 }
 

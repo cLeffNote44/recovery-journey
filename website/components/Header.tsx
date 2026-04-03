@@ -23,12 +23,12 @@ export function Header() {
           <Link href="/" className="flex items-center gap-1.5 group">
             <img
               src="/brand-recover-icon.jpg"
-              alt=""
+              alt="Recover"
               className="h-8 w-8 rounded-md object-cover"
             />
             <img
               src="/brand-journey-icon.jpg"
-              alt=""
+              alt="Journey"
               className="h-8 w-8 rounded-md object-cover"
             />
             <span className="hidden sm:inline text-lg font-bold tracking-tight ml-1">

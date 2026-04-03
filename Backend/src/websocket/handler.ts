@@ -13,6 +13,9 @@ import logger from '../lib/logger.js'
 // Connected clients map: userId -> Set of WebSocket connections
 const clients = new Map<string, Set<WebSocket>>()
 
+// Track facility associations for each userId
+const userFacilities = new Map<string, string>()
+
 // Connection heartbeat interval
 const HEARTBEAT_INTERVAL = 30000
 const heartbeats = new Map<WebSocket, NodeJS.Timeout>()
@@ -123,6 +126,11 @@ async function handleAuth(
     // Register connection
     addClient(userId, socket)
 
+    // Track facility association for facility-scoped broadcasts
+    if (decoded['facilityId']) {
+      userFacilities.set(userId, decoded['facilityId'] as string)
+    }
+
     socket.send(JSON.stringify({
       type: 'authenticated',
       data: { userId }
@@ -178,6 +186,7 @@ function removeClient(userId: string, socket: WebSocket): void {
     userClients.delete(socket)
     if (userClients.size === 0) {
       clients.delete(userId)
+      userFacilities.delete(userId)
     }
   }
 }
@@ -200,11 +209,12 @@ export function broadcastToUser(userId: string, message: WebSocketMessage): void
 /**
  * Broadcast message to all clients in a facility
  */
-export function broadcastToFacility(_facilityId: string, message: WebSocketMessage): void {
+export function broadcastToFacility(facilityId: string, message: WebSocketMessage): void {
   const payload = JSON.stringify(message)
-  for (const [_userId, sockets] of clients) {
-    // Check if this is a staff member at this facility
-    // (In production, you'd track facility associations)
+  for (const [userId, sockets] of clients) {
+    // Only send to users associated with this facility
+    if (userFacilities.get(userId) !== facilityId) continue
+
     for (const socket of sockets) {
       if (socket.readyState === 1) {
         socket.send(payload)

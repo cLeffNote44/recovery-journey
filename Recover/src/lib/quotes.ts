@@ -401,10 +401,10 @@ export const QUOTES: Quote[] = [
  * Get quote of the day based on current date
  * Uses date as seed to ensure same quote shows all day
  */
-export function getQuoteOfTheDay(): Quote {
+export function getQuoteOfTheDay(offset = 0): Quote {
   const today = new Date();
   const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
-  const index = dayOfYear % QUOTES.length;
+  const index = (dayOfYear + offset) % QUOTES.length;
   return QUOTES[index] ?? QUOTES[0]!;
 }
 

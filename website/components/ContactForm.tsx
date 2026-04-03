@@ -55,13 +55,31 @@ export function ContactForm() {
     e.preventDefault();
     setLoading(true);
 
-    // Simulated submission
-    console.log('Form submitted:', formData);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
 
-    setLoading(false);
-    setSubmitted(true);
-    setFormData(initialFormData);
+      if (!response.ok) {
+        throw new Error('Submission failed');
+      }
+
+      setSubmitted(true);
+      setFormData(initialFormData);
+    } catch {
+      // Fallback: send via mailto if API not available
+      const subject = encodeURIComponent(`Demo Request from ${formData.name} - ${formData.organization}`);
+      const body = encodeURIComponent(
+        `Name: ${formData.name}\nEmail: ${formData.email}\nOrganization: ${formData.organization}\nRole: ${formData.role}\nPatient Count: ${formData.patientCount}\n\nMessage:\n${formData.message}`
+      );
+      window.open(`mailto:contact@recoveryjourney.app?subject=${subject}&body=${body}`);
+      setSubmitted(true);
+      setFormData(initialFormData);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {

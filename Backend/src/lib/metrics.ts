@@ -399,10 +399,22 @@ export async function metricsMiddleware(
 }
 
 /**
- * Register metrics endpoint
+ * Register metrics endpoint (requires staff authentication)
  */
 export async function registerMetricsEndpoint(fastify: FastifyInstance): Promise<void> {
-  fastify.get('/metrics', async (_request, reply) => {
+  fastify.get('/metrics', { preHandler: [async (request, reply) => {
+    // Require a valid bearer token or internal request
+    const auth = request.headers.authorization
+    if (!auth?.startsWith('Bearer ')) {
+      reply.status(401).send({ error: 'Authentication required' })
+      return
+    }
+    try {
+      await request.server.jwt.verify(auth.slice(7))
+    } catch {
+      reply.status(401).send({ error: 'Invalid token' })
+    }
+  }] }, async (_request, reply) => {
     // Collect current metrics
     await collectSystemMetrics()
     await collectBusinessMetrics()

@@ -1,171 +1,130 @@
-# Recover Clinician Portal
+# Journey -- Clinician Portal
 
-A modern, cross-platform desktop application for rehabilitation facility staff to manage patients, communicate securely, and track recovery progress in real-time.
+A cross-platform Electron desktop application for rehabilitation facility staff to manage patients, communicate securely, and track recovery progress in real-time.
 
-<p align="center">
-  <strong>Built with Electron + React + TypeScript</strong>
-</p>
-
----
+Part of the [Recovery Journey](https://github.com/cLeffNote44/recovery-journey) monorepo (npm workspaces).
 
 ## Overview
 
-The Recover Clinician Portal is the clinician-facing component of the Recover platform, designed to streamline patient management and communication in rehabilitation facilities. It pairs with the React Native mobile application for patients, creating a seamless care coordination experience.
+Journey is the clinician-facing component of the Recovery Journey platform. It pairs with the **Recover** patient companion app (React + Capacitor) and connects to a shared **Fastify REST API** backend. Staff use Journey to manage patient records, send HIPAA-compliant messages, build treatment plans, and monitor facility-wide analytics.
 
 ### Key Features
 
-- **Dashboard** — Real-time facility stats, appointments, reminders, and message notifications
-- **Patient Management** — Create patients, generate secure registration keys, track recovery milestones
-- **Secure Messaging** — HIPAA-compliant real-time communication with patients via WebSocket
-- **Treatment Plans** — Create, edit, and track individualized treatment plans
-- **Document Management** — Rich text editing with TipTap, import/export capabilities
-- **Multi-Role Support** — Super Admin, Facility Admin, and Counselor access levels
-- **Offline Support** — Service Worker with request queuing and background sync
-- **Dark Mode** — Full dark theme support with system preference detection
-- **Auto-Updates** — Seamless application updates via GitHub releases
+- **Dashboard** -- Facility stats, appointments, reminders, message notifications
+- **Patient Management** -- Registration keys, recovery milestone tracking, detailed patient views
+- **Secure Messaging** -- Real-time WebSocket communication with patients
+- **Treatment Plans** -- Create, edit, and track individualized plans
+- **Document Management** -- Rich text editing (TipTap), import/export
+- **Multi-Role Access** -- Super Admin, Facility Admin, Counselor
+- **Offline Support** -- Service Worker with request queuing and background sync
+- **Dark Mode** -- Full theme support with system preference detection
+- **Auto-Updates** -- Seamless updates via GitHub releases
 
-## Technology
+## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
 | Desktop Runtime | Electron 28 |
-| Frontend | React 18 + TypeScript 5.3 |
+| Frontend | React 18 + TypeScript |
 | Build System | Vite 5 |
-| Styling | Tailwind CSS (with dark mode) |
-| State Management | Zustand (persisted) |
-| Data Fetching | React Query (@tanstack/react-query) |
-| Validation | Zod schemas |
-| Rich Text | TipTap editor |
-| Data Visualization | Recharts |
+| Styling | Tailwind CSS (dark mode) |
+| State | Zustand (tokens in memory only -- HIPAA) |
+| Data Fetching | React Query |
+| Validation | Zod |
+| API Client | Axios with automatic token refresh |
 | Testing | Vitest + React Testing Library + Playwright |
-| Error Tracking | Sentry |
 
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- Node.js 18+
-- npm 9+
+- Node >= 20.0.0
+- npm >= 10.0.0
+- Backend running on port 8000 (see root README)
 
-### Development
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
-
-This launches both the Vite dev server (hot reload) and the Electron application.
-
-### Testing
+### From the monorepo root
 
 ```bash
-npm run test           # Watch mode
-npm run test:run       # Single run (395 tests)
-npm run test:coverage  # Coverage report
-npm run test:e2e       # E2E tests with Playwright
-npm run test:e2e:ui    # E2E with interactive UI
-npm run test:all       # Unit + E2E tests
+npm install                    # Install all workspaces
+npm run dev:backend            # Start Fastify API (requires DB setup)
+npm run dev:journey            # Start Journey (Vite + Electron)
 ```
 
-### Build & Distribution
+### From the Journey directory
 
 ```bash
-# Build for production
-npm run build
-
-# Package for distribution
-npm run package        # All platforms
-npm run package:mac    # macOS (.dmg)
-npm run package:win    # Windows (.exe)
-npm run package:linux  # Linux (.AppImage, .deb)
+npm run dev          # Vite dev server + Electron
+npm run build        # Production build
+npm run test         # Unit tests (watch mode)
+npm run test:run     # Single run
 ```
 
-## Project Structure
+## Architecture
 
 ```
-recover-portal/
-├── electron/              # Electron main process
-│   ├── main.ts           # App lifecycle, windows, auto-update
-│   └── preload.ts        # Secure IPC bridge
+Journey/
+├── electron/
+│   ├── main.ts              # Electron main process, auto-updater
+│   └── preload.ts           # Secure IPC bridge (contextBridge)
 ├── src/
-│   ├── components/       # Reusable UI components
-│   │   ├── SuperAdmin/   # Admin dashboard modules
-│   │   ├── ui/           # Modal, Table, Form, Card, Pagination
+│   ├── components/
+│   │   ├── SuperAdmin/      # Admin dashboard modules
+│   │   ├── ui/              # Modal, Table, Form, Card, Pagination
+│   │   ├── Patients/        # Patient-specific components
 │   │   ├── ErrorBoundary.tsx
-│   │   ├── LoadingState.tsx
 │   │   ├── SessionTimeoutWarning.tsx
 │   │   └── OfflineIndicator.tsx
-│   ├── hooks/            # Custom React hooks
-│   │   ├── usePatients.ts
-│   │   ├── useMessages.ts
-│   │   ├── useWebSocket.ts
-│   │   ├── useServiceWorker.ts
-│   │   └── useSessionTimeout.ts
-│   ├── lib/              # Utilities
-│   │   ├── queryClient.ts
-│   │   ├── sanitize.ts
-│   │   └── sentry.ts
-│   ├── pages/            # Route components
-│   ├── services/         # API layer with auth handling
-│   │   ├── api.ts
-│   │   ├── auditLog.ts
-│   │   └── websocket.ts
-│   ├── stores/           # Zustand state management
-│   ├── validation/       # Zod schemas
-│   └── test/             # Test utilities
-├── public/
-│   └── sw.js             # Service Worker for offline
-├── e2e/                  # Playwright E2E tests
-└── release/              # Build output
+│   ├── hooks/               # React Query hooks, session timeout, WebSocket
+│   ├── lib/                 # queryClient, sanitize (DOMPurify), sentry
+│   ├── pages/               # Route components (Dashboard, Patients, Messages, etc.)
+│   ├── services/            # api.ts (Axios), auditLog.ts, websocket.ts
+│   ├── stores/              # authStore, themeStore (Zustand)
+│   ├── validation/          # Zod schemas
+│   └── config/              # Environment validation at startup
+├── e2e/                     # Playwright E2E tests
+└── public/
+    └── sw.js                # Service Worker for offline support
 ```
+
+## Testing
+
+**395 unit tests** (Vitest) + **117 E2E tests** (Playwright) = **512 total**
+
+```bash
+npm run test              # Unit tests (watch)
+npm run test:run          # Unit tests (single run)
+npm run test:coverage     # With coverage report
+npm run test:e2e          # Playwright E2E
+npm run test:e2e:headed   # E2E with visible browser
+npm run test:all          # Unit + E2E combined
+```
+
+E2E suites cover auth flows, patient management, messaging, documents, treatment plans, settings, and error handling.
+
+## Building & Packaging
+
+```bash
+npm run package            # All platforms
+npm run package:mac        # macOS (.dmg)
+npm run package:win        # Windows (.exe)
+npm run package:linux      # Linux (.AppImage, .deb)
+```
+
+Auto-update is configured via `electron-updater` publishing to GitHub releases.
 
 ## HIPAA Compliance
 
-- **Session Timeout** — Auto-logout after 15 min inactivity with 2-min warning
-- **Audit Logging** — All PHI access logged with user ID, timestamp, and context
-- **Token Security** — Access tokens in memory only, never localStorage
-- **Rich Text Sanitization** — DOMPurify prevents XSS in user content
-- **Unsaved Changes Protection** — Prevents accidental data loss
+- **Tokens in memory only** -- never persisted to localStorage/sessionStorage
+- **15-minute session timeout** with 2-minute warning modal
+- **Audit logging** -- all PHI access logged (user, timestamp, action, resource, fields)
+- **Rich text sanitization** -- DOMPurify on all user HTML input
+- **Logout requires reason** -- `logout('manual')`, `logout('session_timeout')`, `logout('forced')`
 
-## Security
+## Related
 
-- **Token Management** — Access tokens stored in memory only (not localStorage)
-- **Session Isolation** — contextBridge isolates renderer from Node.js APIs
-- **Auto Token Refresh** — Transparent token refresh with request queuing
-- **Secure IPC** — All main/renderer communication through validated channels
-- **Environment Validation** — API URLs validated at startup
+- **Backend** -- Fastify REST API + WebSocket server (`../Backend`)
+- **Recover** -- React + Capacitor patient companion app (`../Recover`)
 
-## Design
+## License
 
-The application uses a cohesive blue color scheme matching the mobile companion app:
-
-- **Primary**: Blue scale (#1e3a8a to #3b82f6)
-- **Success**: Green (#22c55e)
-- **Warning**: Amber (#f59e0b)
-- **Danger**: Red (#ef4444)
-
-Dark mode fully supported with Tailwind's `dark:` prefix.
-
-## Roadmap
-
-- [x] WebSocket real-time updates
-- [x] Offline mode with sync
-- [x] Session timeout & audit logging
-- [x] Dark mode support
-- [ ] Video call integration
-- [ ] Advanced analytics dashboard
-- [ ] Mobile responsive admin view
-
-## Related Projects
-
-- **recover-backend** — FastAPI backend service
-- **recover-mobile** — React Native patient application
-
----
-
-<p align="center">
-  <strong>Recover System</strong> — Transforming rehabilitation through technology
-</p>
+Proprietary. See root repository for details.
