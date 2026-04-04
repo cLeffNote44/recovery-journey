@@ -1,0 +1,74 @@
+name: Scheduled Database Backup
+
+on:
+  schedule:
+    # Daily at 3:17 AM ET (off-peak, avoid :00/:30 load spikes)
+    - cron: '17 7 * * *'  # 7:17 UTC = 3:17 AM ET
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to backup'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  backup:
+    name: Database Backup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - environment: production
+            host_secret: PRODUCTION_HOST
+          - environment: staging
+            host_secret: STAGING_HOST
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Run backup
+        env:
+          DEPLOY_HOST: ${{ secrets[matrix.host_secret] }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          echo "Running ${{ matrix.environment }} database backup..."
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
+            cd /opt/recovery-journey
+            ./scripts/backup.sh ${{ matrix.environment }}
+          EOF
+
+      - name: Verify backup
+        env:
+          DEPLOY_HOST: ${{ secrets[matrix.host_secret] }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          echo "Verifying backup exists..."
+          LATEST=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} \
+            'ls -1t /opt/recovery-journey/backups/*.sql.gz.enc 2>/dev/null | head -1 || echo "none"')
+          if [ "$LATEST" = "none" ]; then
+            echo "::warning::No encrypted backup file found"
+          else
+            echo "Latest backup: $LATEST"
+          fi
+
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+      - name: Notify backup failure
+        if: failure()
+        run: |
+          echo "::error::${{ matrix.environment }} database backup FAILED"

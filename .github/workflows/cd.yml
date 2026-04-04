@@ -175,16 +175,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Capture current version and backup database
+        env:
+          DEPLOY_HOST: ${{ secrets.STAGING_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          PREVIOUS_VERSION=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} \
+            'cd /opt/recovery-journey && git describe --tags --always 2>/dev/null || echo "none"')
+          echo "PREVIOUS_VERSION=${PREVIOUS_VERSION}" >> $GITHUB_ENV
+          echo "Previous version: ${PREVIOUS_VERSION}"
+
+          echo "Creating pre-deployment database backup..."
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} \
+            'cd /opt/recovery-journey && ./scripts/backup.sh staging --quiet || echo "Backup warning (non-fatal)"'
+
       - name: Deploy to staging
         env:
           DEPLOY_HOST: ${{ secrets.STAGING_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           echo "Deploying version ${{ needs.setup.outputs.version }} to staging..."
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
             cd /opt/recovery-journey
             git fetch --tags
@@ -193,25 +211,52 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
             docker compose -f docker-compose.prod.yml exec -T backend npx prisma migrate deploy
           EOF
-          rm -f ~/.ssh/deploy_key
 
       - name: Verify deployment
+        id: health_check
         run: |
           echo "Verifying staging deployment..."
           sleep 15
-          curl -f https://staging-api.recoveryjourney.app/health || exit 1
+          for i in 1 2 3; do
+            if curl -sf https://staging-api.recoveryjourney.app/health; then
+              echo "Health check passed (attempt $i)"
+              exit 0
+            fi
+            echo "Health check failed (attempt $i/3), retrying in 10s..."
+            sleep 10
+          done
+          echo "Health check failed after 3 attempts"
+          exit 1
+
+      - name: Rollback on failure
+        if: failure() && steps.health_check.outcome == 'failure'
+        env:
+          DEPLOY_HOST: ${{ secrets.STAGING_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          echo "::error::Deployment failed — rolling back to ${PREVIOUS_VERSION}"
+          if [ "${PREVIOUS_VERSION}" != "none" ]; then
+            ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
+              cd /opt/recovery-journey
+              git checkout ${PREVIOUS_VERSION}
+              docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            EOF
+            echo "Rolled back to ${PREVIOUS_VERSION}"
+          else
+            echo "::warning::No previous version to roll back to"
+          fi
+
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
 
       - name: Notify deployment success
         if: success()
-        run: |
-          echo "Staging deployment successful!"
-          # Add Slack/Discord notification here if desired
+        run: echo "Staging deployment of ${{ needs.setup.outputs.version }} successful!"
 
       - name: Notify deployment failure
         if: failure()
-        run: |
-          echo "::error::Staging deployment FAILED for version ${{ needs.setup.outputs.version }}"
-          # Add Slack/Discord failure notification here
+        run: echo "::error::Staging deployment FAILED for version ${{ needs.setup.outputs.version }}"
 
   # ===========================================
   # Deploy to Production
@@ -229,16 +274,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Capture current version and backup database
+        env:
+          DEPLOY_HOST: ${{ secrets.PRODUCTION_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          PREVIOUS_VERSION=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} \
+            'cd /opt/recovery-journey && git describe --tags --always 2>/dev/null || echo "none"')
+          echo "PREVIOUS_VERSION=${PREVIOUS_VERSION}" >> $GITHUB_ENV
+          echo "Previous version: ${PREVIOUS_VERSION}"
+
+          echo "Creating pre-deployment database backup..."
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} \
+            'cd /opt/recovery-journey && ./scripts/backup.sh production --quiet || echo "Backup warning (non-fatal)"'
+
       - name: Deploy to production
         env:
           DEPLOY_HOST: ${{ secrets.PRODUCTION_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           echo "Deploying version ${{ needs.setup.outputs.version }} to production..."
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
             cd /opt/recovery-journey
             git fetch --tags
@@ -247,16 +310,47 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
             docker compose -f docker-compose.prod.yml exec -T backend npx prisma migrate deploy
           EOF
-          rm -f ~/.ssh/deploy_key
 
       - name: Verify deployment
+        id: health_check
         run: |
           echo "Verifying production deployment..."
           sleep 15
-          curl -f https://api.recoveryjourney.app/health || exit 1
+          for i in 1 2 3; do
+            if curl -sf https://api.recoveryjourney.app/health; then
+              echo "Health check passed (attempt $i)"
+              exit 0
+            fi
+            echo "Health check failed (attempt $i/3), retrying in 10s..."
+            sleep 10
+          done
+          echo "Health check failed after 3 attempts"
+          exit 1
+
+      - name: Rollback on failure
+        if: failure() && steps.health_check.outcome == 'failure'
+        env:
+          DEPLOY_HOST: ${{ secrets.PRODUCTION_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          echo "::error::Production deployment failed — rolling back to ${PREVIOUS_VERSION}"
+          if [ "${PREVIOUS_VERSION}" != "none" ]; then
+            ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
+              cd /opt/recovery-journey
+              git checkout ${PREVIOUS_VERSION}
+              docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            EOF
+            echo "Rolled back to ${PREVIOUS_VERSION}"
+          else
+            echo "::warning::No previous version to roll back to"
+          fi
+
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: success() && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
@@ -266,15 +360,11 @@ jobs:
 
       - name: Notify deployment success
         if: success()
-        run: |
-          echo "Production deployment successful!"
-          # Add Slack/Discord notification here
+        run: echo "Production deployment of ${{ needs.setup.outputs.version }} successful!"
 
       - name: Notify deployment failure
         if: failure()
-        run: |
-          echo "::error::Production deployment FAILED for version ${{ needs.setup.outputs.version }}"
-          # Add Slack/Discord failure notification here
+        run: echo "::error::Production deployment FAILED for version ${{ needs.setup.outputs.version }}"
 
   # ===========================================
   # Build Desktop App (Journey)

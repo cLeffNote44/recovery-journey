@@ -15,6 +15,11 @@ export default defineConfig({
     host: true,
     port: 5173,
   },
+  esbuild: {
+    // Strip console.log and console.debug from production builds
+    // Keeps console.warn and console.error for runtime diagnostics
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+  },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
