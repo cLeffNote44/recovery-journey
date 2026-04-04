@@ -58,8 +58,13 @@ function validateEnv(): EnvConfig {
     }
   }
 
+  const resolvedUrl = apiUrl || (isDevelopment ? 'http://localhost:8000/api/v1' : '')
+  if (isProduction && !resolvedUrl) {
+    throw new EnvironmentError('VITE_API_URL is required in production')
+  }
+
   return {
-    apiUrl: apiUrl || 'http://localhost:3000/api/v1',
+    apiUrl: resolvedUrl,
     isDevelopment,
     isProduction,
   }

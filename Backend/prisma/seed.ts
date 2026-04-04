@@ -4,6 +4,12 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
+  // Guard: never seed a production database with test data
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ Cannot seed a production database. Aborting.')
+    process.exit(1)
+  }
+
   console.log('🌱 Seeding database...')
 
   // Create a test facility

@@ -53,6 +53,17 @@ if (!parsed.success) {
   process.exit(1)
 }
 
+// In production, encryption and audit secrets are mandatory for HIPAA compliance
+if (parsed.data.NODE_ENV === 'production') {
+  const missing: string[] = []
+  if (!parsed.data.ENCRYPTION_KEY) missing.push('ENCRYPTION_KEY')
+  if (!parsed.data.AUDIT_SECRET) missing.push('AUDIT_SECRET')
+  if (missing.length > 0) {
+    console.error(`❌ Production requires these environment variables for HIPAA compliance: ${missing.join(', ')}`)
+    process.exit(1)
+  }
+}
+
 export const config = parsed.data
 
 // Type for use elsewhere

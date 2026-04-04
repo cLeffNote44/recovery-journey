@@ -24,13 +24,18 @@ import {
   type SyncItemType,
 } from '@/lib/sync-queue';
 
-// API Configuration - can be overridden via environment
+// API Configuration - requires VITE_FACILITY_API_URL in production
 const getApiUrl = (): string => {
-  // Check for environment variable first
   if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FACILITY_API_URL) {
     return import.meta.env.VITE_FACILITY_API_URL;
   }
-  // Default to local development
+  if (import.meta.env?.PROD) {
+    throw new Error(
+      'VITE_FACILITY_API_URL environment variable is required in production. ' +
+      'Set it to your backend API URL (e.g. https://api.recoveryjourney.app/api/v1).'
+    );
+  }
+  console.warn('[Facility API] VITE_FACILITY_API_URL not set, using localhost fallback (dev only)');
   return 'http://localhost:8000/api/v1';
 };
 

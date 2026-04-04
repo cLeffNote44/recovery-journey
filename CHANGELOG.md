@@ -5,6 +5,19 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2026-04-04
+
+### Fixed
+- Generated initial Prisma migration (476-line SQL) — `prisma migrate deploy` now works in CD pipeline
+- Recover `facility-api.ts` throws on missing `VITE_FACILITY_API_URL` in production instead of falling back to localhost
+- Journey CSP in `index.html` now allows `https:` and `wss:` connections for production backends
+- Journey `config/env.ts` no longer falls back to localhost in production — throws `EnvironmentError`
+- Journey `websocket.ts` URL fallback gated to development only
+
+### Security
+- `ENCRYPTION_KEY` and `AUDIT_SECRET` now required in production (validated at startup, exits with error)
+- Seed script (`prisma/seed.ts`) refuses to run when `NODE_ENV=production`
+
 ## [1.7.0] - 2026-04-03
 
 ### Security

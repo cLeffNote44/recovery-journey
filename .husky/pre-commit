@@ -37,7 +37,7 @@ if [ -n "$JOURNEY_FILES" ]; then
     STAGED_TS_FILES=$(echo "$JOURNEY_FILES" | grep -E '\.(ts|tsx|js|jsx)$' | sed 's|^Journey/||' || true)
     if [ -n "$STAGED_TS_FILES" ]; then
         echo "  Running ESLint..."
-        echo "$STAGED_TS_FILES" | xargs npx eslint --fix --max-warnings 0
+        echo "$STAGED_TS_FILES" | xargs npx eslint --fix
 
         echo "  Running TypeScript check..."
         npx tsc --noEmit

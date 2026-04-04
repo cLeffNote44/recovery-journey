@@ -98,7 +98,7 @@ export type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'rec
 // =============================================================================
 
 const DEFAULT_CONFIG: RequiredWebSocketConfig = {
-  url: import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws',
+  url: import.meta.env.VITE_WS_URL || (import.meta.env.DEV ? 'ws://localhost:8000/ws' : ''),
   reconnect: {
     enabled: true,
     delay: 1000,
