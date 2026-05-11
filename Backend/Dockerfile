@@ -11,7 +11,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Base image with Node.js
 # -----------------------------------------------------------------------------
-FROM node:25-alpine AS base
+FROM node:26-alpine AS base
 
 # Install security updates and required packages
 RUN apk update && apk upgrade && \
