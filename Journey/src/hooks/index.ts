@@ -101,6 +101,7 @@ export {
   useSuspendFacility,
   useAdminAdministrators,
   useCreateAdministrator,
+  useCreateClinician,
   useResetAdminPassword,
   useAdminClinicians,
   useAdminPatients,

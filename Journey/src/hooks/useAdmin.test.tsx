@@ -11,6 +11,7 @@ import {
   useSuspendFacility,
   useAdminAdministrators,
   useCreateAdministrator,
+  useCreateClinician,
   useResetAdminPassword,
   useAdminClinicians,
   useAdminPatients,
@@ -29,6 +30,7 @@ vi.mock('../services/api', () => ({
     suspendFacility: vi.fn(),
     getAdministrators: vi.fn(),
     createAdministrator: vi.fn(),
+    createClinician: vi.fn(),
     resetAdminPassword: vi.fn(),
     getAllClinicians: vi.fn(),
     getAllPatients: vi.fn(),
@@ -360,6 +362,59 @@ describe('useCreateAdministrator', () => {
     })
 
     expect(showToast.success).toHaveBeenCalledWith('Administrator created successfully!')
+  })
+})
+
+describe('useCreateClinician', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should create a clinician successfully', async () => {
+    vi.mocked(superAdminAPI.createClinician).mockResolvedValueOnce({
+      success: true,
+      staff: { id: 'new-1', firstName: 'New', lastName: 'Counselor' },
+    })
+
+    const { result } = renderHook(() => useCreateClinician(), {
+      wrapper: createWrapper(),
+    })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        facility_id: 'facility-1',
+        first_name: 'New',
+        last_name: 'Counselor',
+        email: 'counselor@test.com',
+        temp_password: 'TempPass123!',
+      })
+    })
+
+    expect(superAdminAPI.createClinician).toHaveBeenCalled()
+    expect(showToast.success).toHaveBeenCalledWith('Clinician created successfully!')
+  })
+
+  it('should handle create errors', async () => {
+    vi.mocked(superAdminAPI.createClinician).mockResolvedValueOnce({
+      success: false,
+      error: 'Email already in use',
+    })
+
+    const { result } = renderHook(() => useCreateClinician(), {
+      wrapper: createWrapper(),
+    })
+
+    await expect(
+      result.current.mutateAsync({
+        facility_id: 'facility-1',
+        first_name: 'New',
+        last_name: 'Counselor',
+        email: 'dup@test.com',
+        temp_password: 'TempPass123!',
+      })
+    ).rejects.toThrow('Email already in use')
+
+    expect(showToast.error).toHaveBeenCalled()
   })
 })
 

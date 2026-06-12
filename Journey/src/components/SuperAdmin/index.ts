@@ -5,6 +5,7 @@ export { default as QuickActions } from './QuickActions'
 export { default as FacilitiesTable } from './FacilitiesTable'
 export { default as AnalyticsSection } from './AnalyticsSection'
 export { default as DataTable } from './DataTable'
+export { AddAdministratorModal, AddClinicianModal, AddPatientModal } from './CreateEntityModals'
 
 // Types
 export * from './types'

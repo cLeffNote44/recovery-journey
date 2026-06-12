@@ -466,7 +466,30 @@ export const superAdminAPI = {
   },
 
   createAdministrator: async (data: CreateAdminData) => {
-    const response = await api.post('/admin/administrators', data);
+    // Backed by the shared staff-create endpoint with a FACILITY_ADMIN role.
+    const response = await api.post('/admin/staff', {
+      firstName: data.first_name,
+      lastName: data.last_name,
+      email: data.email,
+      password: data.temp_password,
+      role: 'FACILITY_ADMIN',
+      facilityId: data.facility_id,
+      phone: data.phone,
+    });
+    return response.data;
+  },
+
+  createClinician: async (data: CreateAdminData) => {
+    // Backed by the shared staff-create endpoint with a COUNSELOR role.
+    const response = await api.post('/admin/staff', {
+      firstName: data.first_name,
+      lastName: data.last_name,
+      email: data.email,
+      password: data.temp_password,
+      role: 'COUNSELOR',
+      facilityId: data.facility_id,
+      phone: data.phone,
+    });
     return response.data;
   },
 
