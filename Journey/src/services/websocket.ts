@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- intentional connection diagnostics; stripped from prod builds */
 /**
  * WebSocket Service for Real-Time Communication
  *

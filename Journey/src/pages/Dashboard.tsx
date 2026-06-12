@@ -67,6 +67,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboardData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch only when facility changes
   }, [user?.facility_id])
 
   const getReminderIcon = (iconType: string) => {
@@ -91,7 +92,7 @@ export default function Dashboard() {
             Welcome back, {user?.first_name || 'Clinician'}!
           </h1>
           <p className="text-primary-100 mt-1">
-            Here's an overview of your facility's activity today.
+            Here&apos;s an overview of your facility&apos;s activity today.
           </p>
           {isUsingMockData && !isLoading && (
             <div className="flex items-center gap-3 mt-2">

@@ -60,7 +60,8 @@ const RICH_TEXT_CONFIG: DOMPurifyConfig = {
     'data-*',
   ],
 
-  // Only allow safe URI schemes
+  // Only allow safe URI schemes (regex adapted from DOMPurify — kept verbatim)
+  // eslint-disable-next-line no-useless-escape
   ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
 
   // Allow data URIs for images (base64 encoded)
@@ -92,6 +93,7 @@ const MESSAGE_CONFIG: DOMPurifyConfig = {
     'a',
   ],
   ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
+  // eslint-disable-next-line no-useless-escape
   ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
 }
 

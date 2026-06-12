@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- intentional dev-only performance logging; stripped from prod builds */
 import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query'
 
 // =============================================================================

@@ -80,7 +80,7 @@ export function ProgramAssignmentModal({
 
         <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
           Assigning a program will automatically schedule recurring sessions based on the
-          program's template.
+          program&apos;s template.
         </p>
 
         <form

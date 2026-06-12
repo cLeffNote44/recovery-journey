@@ -389,7 +389,7 @@ describe('AuditLogService', () => {
   describe('queue management', () => {
     it('should limit queue size on repeated failures', async () => {
       // Make all API calls fail
-      ;(api.post as ReturnType<typeof vi.fn>).mockRejectedValue(
+      (api.post as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Network error')
       )
 
