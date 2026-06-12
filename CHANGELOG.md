@@ -5,6 +5,24 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-06-12
+
+### Security
+- Two-factor authentication is now enforced at staff login — accounts with 2FA enabled receive a short-lived pending token that must be exchanged with a valid TOTP code before any access/refresh tokens are issued; failed codes count toward the existing account lockout
+- WebSocket connections derive the user type (staff/patient) from the verified JWT payload instead of trusting the client-supplied value, preventing patients from registering as staff and receiving staff-targeted broadcasts
+- Typing indicators are only forwarded between connections in the same facility
+- Goal sync (`/sync/goals`, `/sync/batch`) scopes updates to the authenticated patient — a client-supplied `recoverGoalId` can no longer overwrite another patient's goal
+- Patient updates: facility transfers now require SUPER_ADMIN, and counselor reassignment validates the target is active staff at the patient's facility
+- Journey: document HTML is re-sanitized at render time (defense in depth on all `dangerouslySetInnerHTML` sites)
+- Journey: removed `'unsafe-inline'` from the CSP `script-src`; added explicit font-source allowances
+- Journey: React Query cache (cached PHI) is purged on logout
+- `authenticate` middleware now rejects unrecognized JWT payload shapes explicitly
+
+### Added
+- `POST /auth/staff/login/2fa` endpoint to complete a 2FA login
+- Two-factor code entry step in the Journey login page
+- Shared TOTP helper (`Backend/src/lib/totp.ts`) so 2FA parameters cannot drift between routes
+
 ## [1.7.2] - 2026-04-04
 
 ### Security

@@ -24,7 +24,14 @@ export interface PatientJwtPayload {
   deviceId: string
 }
 
-export type JwtPayload = StaffJwtPayload | PatientJwtPayload
+// Issued after password verification when 2FA is enabled; only exchangeable
+// at /auth/staff/login/2fa. Must never authenticate a regular request.
+export interface TwoFactorPendingPayload {
+  id: string
+  type: '2fa_pending'
+}
+
+export type JwtPayload = StaffJwtPayload | PatientJwtPayload | TwoFactorPendingPayload
 
 // Extend FastifyRequest with user data
 declare module 'fastify' {
@@ -53,6 +60,9 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
       request.staffUser = decoded
     } else if (decoded.type === 'patient') {
       request.patientUser = decoded
+    } else {
+      // 2FA-pending and any unknown payload shapes are not authenticated users
+      throw new Error('Unrecognized token payload')
     }
   } catch {
     throw ApiError.unauthorized('Invalid or expired token')

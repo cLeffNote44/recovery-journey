@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
 import bcrypt from 'bcryptjs'
 import { buildApp, mockPrisma, makeStaff, makeRegKey, makePatient } from '../test/setup.js'
+import { createTotp } from '../lib/totp.js'
 import type { FastifyInstance } from 'fastify'
 
 describe('Auth Routes', () => {
@@ -173,6 +174,131 @@ describe('Auth Routes', () => {
       })
 
       expect(res.statusCode).toBe(400)
+    })
+  })
+
+  // ─── Two-Factor Login ─────────────────────────────────────────────────────
+
+  describe('POST /api/v1/auth/staff/login with 2FA', () => {
+    const TOTP_SECRET = 'JBSWY3DPEHPK3PXP'
+
+    const make2faStaff = (overrides: Record<string, unknown> = {}) =>
+      makeStaff({ twoFactorEnabled: true, twoFactorSecret: TOTP_SECRET, ...overrides })
+
+    const currentCode = () =>
+      createTotp('clinician@test.com', TOTP_SECRET).generate()
+
+    it('returns a pending token instead of real tokens when 2FA is enabled', async () => {
+      const hash = await bcrypt.hash('password123', 10)
+      mockPrisma.staff.findUnique.mockResolvedValue(make2faStaff({ passwordHash: hash }))
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/staff/login',
+        payload: { email: 'clinician@test.com', password: 'password123' },
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = res.json()
+      expect(body.requiresTwoFactor).toBe(true)
+      expect(body.pendingToken).toBeDefined()
+      expect(body.accessToken).toBeUndefined()
+      expect(body.refreshToken).toBeUndefined()
+    })
+
+    it('exchanges pending token + valid code for real tokens', async () => {
+      const hash = await bcrypt.hash('password123', 10)
+      mockPrisma.staff.findUnique.mockResolvedValue(make2faStaff({ passwordHash: hash }))
+      mockPrisma.staff.update.mockResolvedValue({})
+      mockPrisma.refreshToken.create.mockResolvedValue({})
+
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/staff/login',
+        payload: { email: 'clinician@test.com', password: 'password123' },
+      })
+      const { pendingToken } = loginRes.json()
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/staff/login/2fa',
+        payload: { pendingToken, code: currentCode() },
+      })
+
+      expect(res.statusCode).toBe(200)
+      const body = res.json()
+      expect(body.accessToken).toBeDefined()
+      expect(body.refreshToken).toBeDefined()
+      expect(body.user.email).toBe('clinician@test.com')
+    })
+
+    it('rejects an invalid 2FA code and increments failed attempts', async () => {
+      const hash = await bcrypt.hash('password123', 10)
+      mockPrisma.staff.findUnique.mockResolvedValue(make2faStaff({ passwordHash: hash }))
+      mockPrisma.staff.update.mockResolvedValue({})
+
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/staff/login',
+        payload: { email: 'clinician@test.com', password: 'password123' },
+      })
+      const { pendingToken } = loginRes.json()
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/staff/login/2fa',
+        payload: { pendingToken, code: '000000' },
+      })
+
+      expect(res.statusCode).toBe(401)
+      expect(mockPrisma.staff.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ failedLoginAttempts: 1 }),
+        })
+      )
+      expect(mockPrisma.refreshToken.create).not.toHaveBeenCalled()
+    })
+
+    it('rejects a regular access token as pending token', async () => {
+      mockPrisma.staff.findUnique.mockResolvedValue(make2faStaff())
+
+      // A full staff access token must not be usable as a 2FA session
+      const staffToken = app.jwt.sign({
+        id: 'staff-1',
+        email: 'clinician@test.com',
+        role: 'COUNSELOR',
+        facilityId: 'facility-1',
+      })
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/staff/login/2fa',
+        payload: { pendingToken: staffToken, code: currentCode() },
+      })
+
+      expect(res.statusCode).toBe(401)
+    })
+
+    it('pending token cannot authenticate regular requests', async () => {
+      const hash = await bcrypt.hash('password123', 10)
+      mockPrisma.staff.findUnique.mockResolvedValue(make2faStaff({ passwordHash: hash }))
+
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/staff/login',
+        payload: { email: 'clinician@test.com', password: 'password123' },
+      })
+      const { pendingToken } = loginRes.json()
+
+      // Try using the pending token on an authenticated patient-sync route
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/sync/treatment-plan',
+        headers: { authorization: `Bearer ${pendingToken}` },
+      })
+
+      expect(res.statusCode).toBeGreaterThanOrEqual(401)
+      expect(res.statusCode).toBeLessThanOrEqual(403)
     })
   })
 

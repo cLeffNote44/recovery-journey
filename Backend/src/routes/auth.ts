@@ -1,10 +1,13 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import type { StaffRole } from '@prisma/client'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { nanoid } from 'nanoid'
 import { prisma } from '../lib/prisma.js'
 import { ApiError } from '../lib/error-handler.js'
 import { AuditLogger } from '../lib/audit-log.js'
+import { validateTotpCode } from '../lib/totp.js'
+import type { JwtPayload } from '../middleware/auth.js'
 import { config } from '../config/env.js'
 
 // Validation schemas
@@ -22,6 +25,11 @@ const patientLoginSchema = z.object({
 
 const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1)
+})
+
+const twoFactorLoginSchema = z.object({
+  pendingToken: z.string().min(1),
+  code: z.string().length(6).regex(/^\d+$/)
 })
 
 // Token expiry calculation
@@ -42,7 +50,57 @@ function getExpiryMs(duration: string): number {
   }
 }
 
+interface StaffForTokens {
+  id: string
+  email: string
+  role: StaffRole
+  firstName: string
+  lastName: string
+  facilityId: string | null
+  facility: { name: string } | null
+}
+
 export async function authRoutes(fastify: FastifyInstance) {
+  /**
+   * Issue access + refresh tokens for a fully authenticated staff member.
+   * Shared by password-only login and the 2FA exchange endpoint.
+   */
+  async function issueStaffTokens(staff: StaffForTokens) {
+    const accessToken = fastify.jwt.sign({
+      id: staff.id,
+      email: staff.email,
+      role: staff.role,
+      facilityId: staff.facilityId
+    })
+
+    const refreshToken = nanoid(64)
+    const refreshExpiresAt = new Date(Date.now() + getExpiryMs(config.JWT_REFRESH_EXPIRES_IN))
+
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        staffId: staff.id,
+        expiresAt: refreshExpiresAt
+      }
+    })
+
+    return {
+      success: true,
+      accessToken,
+      refreshToken,
+      expiresIn: getExpiryMs(config.JWT_EXPIRES_IN),
+      user: {
+        id: staff.id,
+        email: staff.email,
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        role: staff.role,
+        facilityId: staff.facilityId,
+        facilityName: staff.facility?.name
+      }
+    }
+  }
+
   /**
    * POST /auth/staff/login
    * Staff login with email/password
@@ -93,6 +151,19 @@ export async function authRoutes(fastify: FastifyInstance) {
       throw ApiError.unauthorized('Invalid email or password')
     }
 
+    // If 2FA is enabled, a correct password is not a complete login.
+    // Issue a short-lived pending token that can only be exchanged for real
+    // tokens at /staff/login/2fa with a valid TOTP code. Failed-attempt
+    // counters are intentionally NOT reset here — otherwise an attacker with
+    // the password could reset the lockout by restarting the login flow.
+    if (staff.twoFactorEnabled && staff.twoFactorSecret) {
+      const pendingToken = fastify.jwt.sign(
+        { id: staff.id, type: '2fa_pending' as const },
+        { expiresIn: '5m' }
+      )
+      return { success: true, requiresTwoFactor: true, pendingToken }
+    }
+
     // Reset failed attempts on successful login
     await prisma.staff.update({
       where: { id: staff.id },
@@ -103,45 +174,75 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
     })
 
-    // Generate tokens
-    const accessToken = fastify.jwt.sign({
-      id: staff.id,
-      email: staff.email,
-      role: staff.role,
-      facilityId: staff.facilityId
-    })
-
-    const refreshToken = nanoid(64)
-    const refreshExpiresAt = new Date(Date.now() + getExpiryMs(config.JWT_REFRESH_EXPIRES_IN))
-
-    // Store refresh token
-    await prisma.refreshToken.create({
-      data: {
-        token: refreshToken,
-        staffId: staff.id,
-        expiresAt: refreshExpiresAt
-      }
-    })
-
     // Audit log
     const auditWithUser = AuditLogger.fromRequest(request, staff.id)
     await auditWithUser.loginSuccess(staff.id)
 
-    return {
-      success: true,
-      accessToken,
-      refreshToken,
-      expiresIn: getExpiryMs(config.JWT_EXPIRES_IN),
-      user: {
-        id: staff.id,
-        email: staff.email,
-        firstName: staff.firstName,
-        lastName: staff.lastName,
-        role: staff.role,
-        facilityId: staff.facilityId,
-        facilityName: staff.facility?.name
-      }
+    return issueStaffTokens(staff)
+  })
+
+  /**
+   * POST /auth/staff/login/2fa
+   * Exchange a 2FA pending token + TOTP code for real tokens
+   */
+  fastify.post('/staff/login/2fa', async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = twoFactorLoginSchema.parse(request.body)
+    const audit = AuditLogger.fromRequest(request)
+
+    let decoded: JwtPayload
+    try {
+      decoded = fastify.jwt.verify<JwtPayload>(body.pendingToken)
+    } catch {
+      throw ApiError.unauthorized('Two-factor session expired. Please log in again.')
     }
+
+    if (!('type' in decoded) || decoded.type !== '2fa_pending') {
+      throw ApiError.unauthorized('Invalid two-factor session')
+    }
+
+    const staff = await prisma.staff.findUnique({
+      where: { id: decoded.id },
+      include: { facility: true }
+    })
+
+    if (!staff || staff.status !== 'ACTIVE' || !staff.twoFactorEnabled || !staff.twoFactorSecret) {
+      throw ApiError.unauthorized('Invalid two-factor session')
+    }
+
+    if (staff.lockedUntil && staff.lockedUntil > new Date()) {
+      await audit.loginFailed(staff.email, 'Account locked')
+      throw ApiError.unauthorized('Account is temporarily locked. Please try again later.')
+    }
+
+    if (!validateTotpCode(staff.email, staff.twoFactorSecret, body.code)) {
+      // Failed 2FA codes count toward the same lockout as bad passwords
+      const failedAttempts = staff.failedLoginAttempts + 1
+      const lockedUntil = failedAttempts >= 5
+        ? new Date(Date.now() + 15 * 60 * 1000)
+        : null
+
+      await prisma.staff.update({
+        where: { id: staff.id },
+        data: { failedLoginAttempts: failedAttempts, lockedUntil }
+      })
+
+      await audit.loginFailed(staff.email, 'Invalid 2FA code')
+      throw ApiError.unauthorized('Invalid two-factor code')
+    }
+
+    await prisma.staff.update({
+      where: { id: staff.id },
+      data: {
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: new Date()
+      }
+    })
+
+    const auditWithUser = AuditLogger.fromRequest(request, staff.id)
+    await auditWithUser.loginSuccess(staff.id)
+
+    return issueStaffTokens(staff)
   })
 
   /**

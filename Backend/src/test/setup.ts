@@ -16,6 +16,7 @@ vi.mock('../lib/prisma.js', () => {
     findMany: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    updateMany: vi.fn(),
     upsert: vi.fn(),
     delete: vi.fn(),
     deleteMany: vi.fn(),
@@ -151,6 +152,8 @@ export function makeStaff(overrides: Record<string, any> = {}) {
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastLoginAt: null,
+    twoFactorEnabled: false,
+    twoFactorSecret: null,
     facility: { id: 'facility-1', name: 'Test Facility' },
     ...overrides,
   }

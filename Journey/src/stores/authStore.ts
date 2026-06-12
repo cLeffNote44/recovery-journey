@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { setUser as setMonitoringUser } from '../services/monitoring'
 import { auditLog } from '../services/auditLog'
+import { queryClient } from '../lib/queryClient'
 
 export interface User {
   id: string
@@ -86,6 +87,9 @@ export const useAuthStore = create<AuthState>()(
         setMonitoringUser(null)
         // Clear audit log user context
         auditLog.clearUserContext()
+        // Purge cached PHI so the next user on this workstation can't see
+        // the previous session's patients, messages, or dashboards
+        queryClient.clear()
         // Also clear any remaining storage
         try {
           sessionStorage.removeItem('auth-storage')

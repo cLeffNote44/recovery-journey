@@ -233,7 +233,8 @@ describe('Patient Sync Routes', () => {
 
   describe('POST /api/v1/sync/goals', () => {
     it('syncs goals with uppercase enums', async () => {
-      mockPrisma.patientGoal.upsert.mockResolvedValue({})
+      mockPrisma.patientGoal.updateMany.mockResolvedValue({ count: 0 })
+      mockPrisma.patientGoal.create.mockResolvedValue({})
 
       const res = await app.inject({
         method: 'POST',
@@ -261,7 +262,8 @@ describe('Patient Sync Routes', () => {
     })
 
     it('normalizes lowercase enums from Recover app', async () => {
-      mockPrisma.patientGoal.upsert.mockResolvedValue({})
+      mockPrisma.patientGoal.updateMany.mockResolvedValue({ count: 0 })
+      mockPrisma.patientGoal.create.mockResolvedValue({})
 
       const res = await app.inject({
         method: 'POST',
@@ -286,10 +288,10 @@ describe('Patient Sync Routes', () => {
 
       expect(res.statusCode).toBe(200)
       expect(res.json().syncedCount).toBe(1)
-      expect(mockPrisma.patientGoal.upsert).toHaveBeenCalledWith(
+      expect(mockPrisma.patientGoal.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { recoverGoalId: '42' },
-          create: expect.objectContaining({
+          data: expect.objectContaining({
+            recoverGoalId: '42',
             category: 'WELLNESS',
             targetType: 'YES_NO',
             frequency: 'DAILY',
@@ -298,8 +300,78 @@ describe('Patient Sync Routes', () => {
       )
     })
 
+    it('scopes goal updates to the authenticated patient', async () => {
+      mockPrisma.patientGoal.updateMany.mockResolvedValue({ count: 1 })
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/sync/goals',
+        headers: authHeaders(),
+        payload: {
+          goals: [
+            {
+              recoverGoalId: 'goal-1',
+              title: 'Attend meetings',
+              category: 'RECOVERY',
+              targetType: 'STREAK',
+              currentValue: 6,
+              frequency: 'WEEKLY',
+              startDate: '2025-01-01T00:00:00.000Z',
+              isActive: true,
+              isCompleted: false,
+            },
+          ],
+        },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json().syncedCount).toBe(1)
+      expect(mockPrisma.patientGoal.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { recoverGoalId: 'goal-1', patientId: 'patient-1' },
+        })
+      )
+      expect(mockPrisma.patientGoal.create).not.toHaveBeenCalled()
+    })
+
+    it('refuses to overwrite a goal owned by another patient', async () => {
+      const { Prisma } = await import('@prisma/client')
+      mockPrisma.patientGoal.updateMany.mockResolvedValue({ count: 0 })
+      mockPrisma.patientGoal.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: 'test',
+        })
+      )
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/sync/goals',
+        headers: authHeaders(),
+        payload: {
+          goals: [
+            {
+              recoverGoalId: 'someone-elses-goal',
+              title: 'Hijacked goal',
+              category: 'RECOVERY',
+              targetType: 'STREAK',
+              currentValue: 0,
+              frequency: 'DAILY',
+              startDate: '2025-01-01T00:00:00.000Z',
+              isActive: true,
+              isCompleted: false,
+            },
+          ],
+        },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json().syncedCount).toBe(0)
+    })
+
     it('accepts optional progress array', async () => {
-      mockPrisma.patientGoal.upsert.mockResolvedValue({})
+      mockPrisma.patientGoal.updateMany.mockResolvedValue({ count: 0 })
+      mockPrisma.patientGoal.create.mockResolvedValue({})
 
       const res = await app.inject({
         method: 'POST',
@@ -337,7 +409,8 @@ describe('Patient Sync Routes', () => {
     it('syncs mixed data types', async () => {
       mockPrisma.checkIn.create.mockResolvedValue({})
       mockPrisma.craving.create.mockResolvedValue({})
-      mockPrisma.patientGoal.upsert.mockResolvedValue({})
+      mockPrisma.patientGoal.updateMany.mockResolvedValue({ count: 0 })
+      mockPrisma.patientGoal.create.mockResolvedValue({})
 
       const res = await app.inject({
         method: 'POST',

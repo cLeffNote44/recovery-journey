@@ -153,6 +153,11 @@ export const authAPI = {
     return response.data;
   },
 
+  staffLogin2fa: async (pendingToken: string, code: string) => {
+    const response = await api.post('/auth/staff/login/2fa', { pendingToken, code });
+    return response.data;
+  },
+
   logout: async (refreshToken?: string) => {
     const response = await api.post('/auth/logout', { refreshToken: refreshToken ?? '' });
     return response.data;
