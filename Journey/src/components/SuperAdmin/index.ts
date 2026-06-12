@@ -11,3 +11,14 @@ export * from './types'
 
 // Utilities
 export { getStatusBadge, getRoleBadge, formatDate } from './utils'
+
+// Backend -> view-model mappers
+export {
+  mapStats,
+  mapFacility,
+  mapAdministrator,
+  mapClinician,
+  mapAdminPatient,
+  mapActivity,
+  relativeTime,
+} from './mappers'

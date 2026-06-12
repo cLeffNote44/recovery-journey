@@ -203,6 +203,137 @@ export async function adminRoutes(fastify: FastifyInstance) {
     return { success: true, message: 'Facility suspended' }
   })
 
+  /**
+   * GET /admin/administrators
+   * List facility administrators across all facilities
+   */
+  fastify.get('/administrators', { preHandler: [requireSuperAdmin] }, async (request: FastifyRequest) => {
+    const admins = await prisma.staff.findMany({
+      where: { role: 'FACILITY_ADMIN' },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        status: true,
+        lastLoginAt: true,
+        facility: { select: { name: true } }
+      },
+      orderBy: { lastName: 'asc' }
+    })
+
+    return {
+      success: true,
+      administrators: admins.map(a => ({
+        id: a.id,
+        firstName: a.firstName,
+        lastName: a.lastName,
+        email: a.email,
+        status: a.status,
+        lastLoginAt: a.lastLoginAt,
+        facilityName: a.facility?.name ?? null
+      }))
+    }
+  })
+
+  /**
+   * GET /admin/clinicians
+   * List clinicians (counselors) across all facilities, with assigned-patient counts
+   */
+  fastify.get('/clinicians', { preHandler: [requireSuperAdmin] }, async (request: FastifyRequest) => {
+    const query = z.object({
+      facilityId: z.string().optional()
+    }).parse(request.query)
+
+    const where: any = { role: 'COUNSELOR' }
+    if (query.facilityId) where.facilityId = query.facilityId
+
+    const clinicians = await prisma.staff.findMany({
+      where,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+        status: true,
+        lastLoginAt: true,
+        facility: { select: { name: true } },
+        _count: { select: { assignedPatients: true } }
+      },
+      orderBy: { lastName: 'asc' }
+    })
+
+    return {
+      success: true,
+      clinicians: clinicians.map(c => ({
+        id: c.id,
+        firstName: c.firstName,
+        lastName: c.lastName,
+        email: c.email,
+        role: c.role,
+        status: c.status,
+        lastLoginAt: c.lastLoginAt,
+        facilityName: c.facility?.name ?? null,
+        patientsAssigned: c._count.assignedPatients
+      }))
+    }
+  })
+
+  /**
+   * GET /admin/patients
+   * List patients across all facilities (super admin cross-facility view)
+   */
+  fastify.get('/patients', { preHandler: [requireSuperAdmin] }, async (request: FastifyRequest) => {
+    const user = request.staffUser!
+    const audit = AuditLogger.fromRequest(request, user.id)
+
+    const query = z.object({
+      facilityId: z.string().optional(),
+      status: z.enum(['PENDING', 'ACTIVE', 'INACTIVE', 'DISCHARGED']).optional()
+    }).parse(request.query)
+
+    const where: any = {}
+    if (query.facilityId) where.facilityId = query.facilityId
+    if (query.status) where.status = query.status
+
+    const patients = await prisma.patient.findMany({
+      where,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        status: true,
+        admissionDate: true,
+        facility: { select: { name: true } },
+        assignedCounselor: { select: { firstName: true, lastName: true } }
+      },
+      orderBy: { lastName: 'asc' }
+    })
+
+    // Listing patient names across facilities is PHI access — record it.
+    await audit.log({
+      action: 'PATIENT_SEARCH',
+      resourceType: 'patient',
+      description: `Super admin viewed patient list (${patients.length} patients)`
+    })
+
+    return {
+      success: true,
+      patients: patients.map(p => ({
+        id: p.id,
+        firstName: p.firstName,
+        lastName: p.lastName,
+        status: p.status,
+        admissionDate: p.admissionDate,
+        facilityName: p.facility?.name ?? null,
+        counselorName: p.assignedCounselor
+          ? `${p.assignedCounselor.firstName} ${p.assignedCounselor.lastName}`
+          : null
+      }))
+    }
+  })
+
   // =====================================
   // Staff Management (Facility Admin+)
   // =====================================

@@ -1,8 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Settings, X } from 'lucide-react'
-import { superAdminAPI } from '../../services/api'
+import { Plus, Settings, X, AlertTriangle } from 'lucide-react'
 import { showToast } from '../../components/Toast'
+import {
+  useAdminStats,
+  useAdminFacilities,
+  useAdminAdministrators,
+  useAdminClinicians,
+  useAdminPatients,
+  useAdminActivity,
+} from '../../hooks'
 
 // Import components
 import {
@@ -19,9 +26,16 @@ import {
   Clinician,
   Patient,
   DashboardStats,
+  ActivityItem,
   getStatusBadge,
   getRoleBadge,
   formatDate,
+  mapStats,
+  mapFacility,
+  mapAdministrator,
+  mapClinician,
+  mapAdminPatient,
+  mapActivity,
 } from '../../components/SuperAdmin'
 
 // Mock data for offline mode
@@ -71,41 +85,50 @@ export default function SuperAdminDashboard({ initialTab = 'overview' }: Props) 
     return saved ? JSON.parse(saved) : DEFAULT_WIDGETS
   })
 
-  // Data states
-  const [stats, setStats] = useState<DashboardStats>(mockStats)
-  const [facilities, setFacilities] = useState<Facility[]>(mockFacilities)
-  const [administrators] = useState<Administrator[]>(mockAdministrators)
-  const [clinicians] = useState<Clinician[]>(mockClinicians)
-  const [patients] = useState<Patient[]>(mockPatients)
-  const [_isLoading, setIsLoading] = useState(true)
-
   // Filter states
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  // Fetch data on mount
+  // Live data (React Query). Each hook falls back to mock data on the page
+  // when the API is unavailable, so the dashboard always renders something.
+  const statsQuery = useAdminStats()
+  const facilitiesQuery = useAdminFacilities()
+  const administratorsQuery = useAdminAdministrators()
+  const cliniciansQuery = useAdminClinicians()
+  const patientsQuery = useAdminPatients()
+  const activityQuery = useAdminActivity()
+
+  const fromApi = (q: { data?: { isFromApi?: boolean } }) => q.data?.isFromApi === true
+
+  const stats: DashboardStats = fromApi(statsQuery)
+    ? mapStats(statsQuery.data!.stats)
+    : mockStats
+  const facilities: Facility[] = fromApi(facilitiesQuery)
+    ? facilitiesQuery.data!.facilities.map(mapFacility)
+    : mockFacilities
+  const administrators: Administrator[] = fromApi(administratorsQuery)
+    ? administratorsQuery.data!.administrators.map(mapAdministrator)
+    : mockAdministrators
+  const clinicians: Clinician[] = fromApi(cliniciansQuery)
+    ? cliniciansQuery.data!.clinicians.map(mapClinician)
+    : mockClinicians
+  const patients: Patient[] = fromApi(patientsQuery)
+    ? patientsQuery.data!.patients.map(mapAdminPatient)
+    : mockPatients
+  const activities: ActivityItem[] = fromApi(activityQuery)
+    ? activityQuery.data!.activity.map(mapActivity)
+    : mockRecentActivity
+
+  // Show the demo-data banner once the primary query has settled off the API.
+  const isUsingMockData = !statsQuery.isLoading && !fromApi(statsQuery)
+
+  // When connected to a real but empty system, guide setup with the wizard.
+  const facilitiesData = facilitiesQuery.data
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [statsRes, facilitiesRes] = await Promise.all([
-          superAdminAPI.getStats(),
-          superAdminAPI.getFacilities(),
-        ])
-        if (statsRes.success) setStats(statsRes.stats)
-        if (facilitiesRes.success) {
-          setFacilities(facilitiesRes.facilities)
-          if (facilitiesRes.facilities.length === 0) {
-            setShowWizard(true)
-          }
-        }
-      } catch {
-        // Using mock data - API unavailable
-      } finally {
-        setIsLoading(false)
-      }
+    if (facilitiesData?.isFromApi && facilitiesData.facilities.length === 0) {
+      setShowWizard(true)
     }
-    fetchData()
-  }, [])
+  }, [facilitiesData])
 
   // Widget customization
   const toggleWidget = (widget: DashboardWidget) => {
@@ -237,6 +260,18 @@ export default function SuperAdminDashboard({ initialTab = 'overview' }: Props) 
         )}
       </div>
 
+      {isUsingMockData && (
+        <div
+          className="mb-6 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/40 border border-yellow-200 dark:border-yellow-800 flex items-start gap-2"
+          role="status"
+        >
+          <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" aria-hidden="true" />
+          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+            Showing demo data — the server is unavailable, so figures may not reflect live activity.
+          </p>
+        </div>
+      )}
+
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
@@ -244,7 +279,7 @@ export default function SuperAdminDashboard({ initialTab = 'overview' }: Props) 
 
           <div className="grid grid-cols-3 gap-6">
             {visibleWidgets.includes('recentActivity') && (
-              <RecentActivity activities={mockRecentActivity} />
+              <RecentActivity activities={activities} />
             )}
             {visibleWidgets.includes('quickActions') && (
               <QuickActions

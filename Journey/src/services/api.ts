@@ -475,11 +475,12 @@ export const superAdminAPI = {
     return response.data;
   },
 
-  // Clinicians (all staff across facilities)
+  // Clinicians (all staff across facilities). The backend reads camelCase
+  // `facilityId`; `role` is accepted for forward-compat (currently ignored).
   getAllClinicians: async (filters: { role?: string; facility_id?: string } = {}) => {
     const params = new URLSearchParams();
     if (filters.role) params.append('role', filters.role);
-    if (filters.facility_id) params.append('facility_id', filters.facility_id);
+    if (filters.facility_id) params.append('facilityId', filters.facility_id);
     const response = await api.get(`/admin/clinicians?${params.toString()}`);
     return response.data;
   },
@@ -488,7 +489,7 @@ export const superAdminAPI = {
   getAllPatients: async (filters: { status?: string; facility_id?: string } = {}) => {
     const params = new URLSearchParams();
     if (filters.status) params.append('status', filters.status);
-    if (filters.facility_id) params.append('facility_id', filters.facility_id);
+    if (filters.facility_id) params.append('facilityId', filters.facility_id);
     const response = await api.get(`/admin/patients?${params.toString()}`);
     return response.data;
   },

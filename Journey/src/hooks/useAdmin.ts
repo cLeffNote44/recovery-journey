@@ -304,7 +304,8 @@ export function useAdminActivity(limit: number = 20) {
     queryFn: async () => {
       const response = await superAdminAPI.getRecentActivity(limit)
       if (response.success) {
-        return { activity: response.activity, isFromApi: true }
+        // Backend returns `activities`; tolerate the legacy `activity` key too.
+        return { activity: response.activities ?? response.activity, isFromApi: true }
       }
       throw new Error('Failed to fetch activity')
     },
