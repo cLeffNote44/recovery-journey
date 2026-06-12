@@ -1,4 +1,5 @@
 import type { AppData } from '@/types/app';
+import { encryptString, decryptString, isEncrypted } from './device-encryption';
 
 /**
  * Data Backup & Restore utilities
@@ -213,9 +214,14 @@ export function getBackupStats(data: BackupData): {
 }
 
 /**
- * Create an automatic backup in localStorage
+ * Create an automatic backup in localStorage.
+ *
+ * The backup contains the FULL app dataset (PHI), so it is encrypted at rest
+ * with the device master key — the same protection applied to the live
+ * stores. (Auto-backups previously wrote plaintext JSON, which bypassed
+ * encryption-at-rest entirely.)
  */
-export function createAutoBackup(data: AppData): void {
+export async function createAutoBackup(data: AppData): Promise<void> {
   try {
     const backup: BackupData = {
       ...data,
@@ -224,9 +230,9 @@ export function createAutoBackup(data: AppData): void {
       appVersion: APP_VERSION
     };
 
-    // Store in localStorage with timestamp
+    // Store in localStorage with timestamp (encrypted)
     const backupKey = `recover_auto_backup_${Date.now()}`;
-    localStorage.setItem(backupKey, JSON.stringify(backup));
+    localStorage.setItem(backupKey, await encryptString(JSON.stringify(backup)));
 
     // Keep only the last 5 auto backups
     const allKeys = Object.keys(localStorage).filter(key => key.startsWith('recover_auto_backup_'));
@@ -239,7 +245,7 @@ export function createAutoBackup(data: AppData): void {
       }
     }
 
-    // Update last backup timestamp
+    // Update last backup timestamp (not PHI)
     localStorage.setItem('recover_last_backup', new Date().toISOString());
   } catch (error) {
     console.error('Failed to create auto backup:', error);
@@ -247,26 +253,37 @@ export function createAutoBackup(data: AppData): void {
 }
 
 /**
+ * Read and decrypt a stored auto-backup blob. Supports legacy plaintext
+ * backups written before encryption-at-rest was introduced.
+ */
+async function readAutoBackup(raw: string): Promise<any | null> {
+  try {
+    const json = isEncrypted(raw) ? await decryptString(raw) : raw;
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Get list of auto backups from localStorage
  */
-export function getAutoBackups(): Array<{ key: string; date: string; stats: ReturnType<typeof getBackupStats> | null }> {
+export async function getAutoBackups(): Promise<Array<{ key: string; date: string; stats: ReturnType<typeof getBackupStats> | null }>> {
   const backups: Array<{ key: string; date: string; stats: ReturnType<typeof getBackupStats> | null }> = [];
 
   try {
     const allKeys = Object.keys(localStorage).filter(key => key.startsWith('recover_auto_backup_'));
 
     for (const key of allKeys) {
-      const backup = localStorage.getItem(key);
-      if (backup) {
-        try {
-          const parsed = JSON.parse(backup);
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = await readAutoBackup(raw);
+        if (parsed) {
           backups.push({
             key,
             date: parsed.exportDate || 'Unknown date',
             stats: getBackupStats(parsed)
           });
-        } catch {
-          // Skip invalid backups
         }
       }
     }
@@ -283,17 +300,24 @@ export function getAutoBackups(): Array<{ key: string; date: string; stats: Retu
 /**
  * Restore from auto backup
  */
-export function restoreAutoBackup(key: string): { success: boolean; data?: AppData; errors?: string[] } {
+export async function restoreAutoBackup(key: string): Promise<{ success: boolean; data?: AppData; errors?: string[] }> {
   try {
-    const backup = localStorage.getItem(key);
-    if (!backup) {
+    const raw = localStorage.getItem(key);
+    if (!raw) {
       return {
         success: false,
         errors: ['Backup not found']
       };
     }
 
-    const parsed = JSON.parse(backup);
+    const parsed = await readAutoBackup(raw);
+    if (!parsed) {
+      return {
+        success: false,
+        errors: ['Failed to restore backup']
+      };
+    }
+
     const validation = validateBackupData(parsed);
 
     if (!validation.valid) {

@@ -94,7 +94,7 @@ export async function scheduleDailyCheckInReminder(time: string): Promise<void> 
         {
           id: 1,
           title: 'Daily Check-In',
-          body: 'Time for your daily recovery check-in! How are you feeling today?',
+          body: 'Time for your daily check-in. Open the app to get started.',
           schedule: {
             at: scheduledTime,
             every: 'day',
@@ -181,12 +181,15 @@ export async function scheduleMeetingReminder(
       return;
     }
 
+    // HIPAA / 42 CFR Part 2: notification text appears on the lock screen.
+    // Do NOT include the meeting name or any recovery specifics — keep it
+    // generic and put details behind the app's authenticated lock.
     const notification: ScheduleOptions = {
       notifications: [
         {
           id: 100 + meetingId, // Offset to avoid conflicts with other notification types
-          title: 'Upcoming Meeting',
-          body: `${title} starts in ${minutesBefore} minutes`,
+          title: 'Reminder',
+          body: `You have a reminder in ${minutesBefore} minutes. Open the app for details.`,
           schedule: {
             at: reminderTime,
           },
@@ -220,12 +223,15 @@ export async function showMilestoneNotification(
     const hasPermission = await checkNotificationPermission();
     if (!hasPermission) return;
 
+    // HIPAA / 42 CFR Part 2: the day count and "sober" disclose recovery
+    // status on the lock screen. Keep the body generic; the specifics
+    // (milestone, days) live inside the authenticated app.
     const notification: ScheduleOptions = {
       notifications: [
         {
           id: Date.now(), // Use timestamp to avoid conflicts
           title: '🎉 Milestone Achieved!',
-          body: `Congratulations on ${daysSober} days sober! ${milestone}`,
+          body: 'You reached a new milestone. Open the app to celebrate!',
           schedule: {
             at: new Date(Date.now() + 1000), // Show in 1 second
           },
@@ -233,8 +239,11 @@ export async function showMilestoneNotification(
           attachments: undefined,
           actionTypeId: '',
           extra: {
+            // Specifics travel in the (non-displayed) payload, surfaced only
+            // after the user opens the authenticated app.
             type: 'milestone',
             daysSober,
+            milestone,
           },
         },
       ],

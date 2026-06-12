@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HIPAA: exclude ALL app data from Android 12+ cloud backups and
+  device-to-device transfers. Paired with android:allowBackup="false" and
+  android:fullBackupContent="false" (pre-Android-12), this prevents patient
+  PHI in app storage from ever leaving the device via OS backup channels.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+    </device-transfer>
+</data-extraction-rules>

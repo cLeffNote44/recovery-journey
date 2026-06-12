@@ -46,7 +46,14 @@ export interface CloudBackup {
 
 // Simple encryption using Web Crypto API
 export class CloudEncryption {
-  private static async getKey(password: string): Promise<CryptoKey> {
+  // A random per-backup salt is generated on encrypt and stored alongside the
+  // ciphertext. (Previously the salt was derived deterministically from the
+  // password, which weakened PBKDF2 by removing salt entropy and making
+  // precomputation across users feasible.)
+  private static SALT_BYTES = 16;
+  private static IV_BYTES = 12;
+
+  private static async getKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
     const encoder = new TextEncoder();
     const keyMaterial = await window.crypto.subtle.importKey(
       'raw',
@@ -56,15 +63,10 @@ export class CloudEncryption {
       ['deriveBits', 'deriveKey']
     );
 
-    // Generate a unique salt from the password itself + a fixed prefix
-    // This ensures different passwords produce different salts
-    const saltInput = `recovery-journey:${password}`;
-    const saltBuffer = await window.crypto.subtle.digest('SHA-256', encoder.encode(saltInput));
-
     return window.crypto.subtle.deriveKey(
       {
         name: 'PBKDF2',
-        salt: new Uint8Array(saltBuffer),
+        salt,
         iterations: 100000,
         hash: 'SHA-256'
       },
@@ -77,8 +79,9 @@ export class CloudEncryption {
 
   static async encrypt(data: string, password: string): Promise<string> {
     const encoder = new TextEncoder();
-    const key = await this.getKey(password);
-    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const salt = window.crypto.getRandomValues(new Uint8Array(this.SALT_BYTES));
+    const key = await this.getKey(password, salt);
+    const iv = window.crypto.getRandomValues(new Uint8Array(this.IV_BYTES));
 
     const encrypted = await window.crypto.subtle.encrypt(
       { name: 'AES-GCM', iv },
@@ -86,20 +89,23 @@ export class CloudEncryption {
       encoder.encode(data)
     );
 
-    // Combine IV and encrypted data
-    const combined = new Uint8Array(iv.length + encrypted.byteLength);
-    combined.set(iv);
-    combined.set(new Uint8Array(encrypted), iv.length);
+    // Combine salt + IV + encrypted data
+    const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+    combined.set(salt, 0);
+    combined.set(iv, salt.length);
+    combined.set(new Uint8Array(encrypted), salt.length + iv.length);
 
     return btoa(String.fromCharCode(...combined));
   }
 
   static async decrypt(encryptedData: string, password: string): Promise<string> {
-    const key = await this.getKey(password);
     const combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
 
-    const iv = combined.slice(0, 12);
-    const data = combined.slice(12);
+    const salt = combined.slice(0, this.SALT_BYTES);
+    const iv = combined.slice(this.SALT_BYTES, this.SALT_BYTES + this.IV_BYTES);
+    const data = combined.slice(this.SALT_BYTES + this.IV_BYTES);
+
+    const key = await this.getKey(password, salt);
 
     const decrypted = await window.crypto.subtle.decrypt(
       { name: 'AES-GCM', iv },
@@ -279,6 +285,12 @@ export class CloudSyncService {
     backup: CloudBackup,
     userId: string
   ): Promise<{ success: boolean; backupId: string; url?: string }> {
+    // HIPAA: never upload patient PHI to cloud storage unencrypted.
+    if (!backup.metadata.encrypted) {
+      console.error('Refusing to upload an unencrypted backup. Provide an encryption password.');
+      return { success: false, backupId: backup.metadata.id };
+    }
+
     // Use Supabase if configured, otherwise fall back to localStorage
     if (isSupabaseConfigured() && supabase) {
       try {
@@ -310,15 +322,17 @@ export class CloudSyncService {
             upsert: true,
           });
 
-        // Get public URL
-        const { data: urlData } = supabase.storage
+        // Return a short-lived SIGNED url (never a public url). The backup
+        // bucket must be private with row-level security; a public url would
+        // expose another patient's PHI to anyone who can guess the path.
+        const { data: urlData } = await supabase.storage
           .from(BACKUP_BUCKET)
-          .getPublicUrl(filePath);
+          .createSignedUrl(filePath, 60); // expires in 60s
 
         return {
           success: true,
           backupId: backup.metadata.id,
-          url: urlData.publicUrl
+          url: urlData?.signedUrl
         };
       } catch (error) {
         console.error('Upload failed:', error);
@@ -520,6 +534,16 @@ export class CloudSyncService {
     error?: string;
   }> {
     const status = SyncStateManager.getStatus();
+
+    // HIPAA: cloud sync always encrypts. Without a password we cannot encrypt,
+    // so refuse rather than risk uploading plaintext PHI.
+    if (this.config.encryptionEnabled && !password) {
+      return {
+        success: false,
+        action: 'conflict',
+        error: 'An encryption password is required to sync to the cloud.',
+      };
+    }
 
     try {
       // Update status to syncing

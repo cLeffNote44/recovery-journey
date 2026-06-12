@@ -84,7 +84,7 @@ export function LockScreen({ onUnlock, reason }: LockScreenProps) {
     }
   };
 
-  const handlePinSubmit = (e: React.FormEvent) => {
+  const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -97,7 +97,7 @@ export function LockScreen({ onUnlock, reason }: LockScreenProps) {
     }
 
     // Validate PIN with rate limiting
-    const result = biometricAuthManager.validatePin(pin);
+    const result = await biometricAuthManager.validatePin(pin);
 
     if (result.success) {
       toast.success('PIN correct');

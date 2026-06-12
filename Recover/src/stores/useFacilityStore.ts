@@ -8,6 +8,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { createEncryptedStorage } from '@/lib/encrypted-storage';
 
 export interface FacilityConnection {
   facilityId: string;
@@ -240,7 +241,9 @@ export const useFacilityStore = create<FacilityState>()(
     }),
     {
       name: 'facility-store',
-      // Only persist non-sensitive data - tokens stored separately
+      storage: createEncryptedStorage(),
+      // Tokens are kept in memory only (excluded via partialize); the
+      // persisted messages/treatment plan are PHI and encrypted at rest.
       partialize: (state) => ({
         isConnected: state.isConnected,
         connection: state.connection,

@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CheckIn, Gratitude, GrowthLog, Meeting, Meditation, Challenge } from '@/types/app';
 import { sanitizeText } from '@/lib/sanitize';
+import { createEncryptedStorage } from '@/lib/encrypted-storage';
 
 interface JournalState {
   // State
@@ -210,6 +211,7 @@ export const useJournalStore = create<JournalState>()(
     }),
     {
       name: 'journal-store',
+      storage: createEncryptedStorage(),
     }
   )
 );

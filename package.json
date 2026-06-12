@@ -1,6 +1,6 @@
 {
   "name": "recovery-journey",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "HIPAA-compliant substance abuse recovery management platform",
   "private": true,
   "workspaces": [

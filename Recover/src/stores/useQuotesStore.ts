@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Quote, CustomQuote } from '@/types/app';
 import { getQuoteOfTheDay, getRandomQuote, getContextualQuote } from '@/lib/quotes';
+import { createEncryptedStorage } from '@/lib/encrypted-storage';
 
 interface QuotesState {
   // State
@@ -62,6 +63,7 @@ export const useQuotesStore = create<QuotesState>()(
     }),
     {
       name: 'quotes-store',
+      storage: createEncryptedStorage(),
     }
   )
 );

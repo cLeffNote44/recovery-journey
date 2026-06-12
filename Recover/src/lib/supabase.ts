@@ -38,7 +38,14 @@ export function isSupabaseConfigured(): boolean {
 }
 
 /**
- * Get the storage bucket name for backups
+ * Get the storage bucket name for backups.
+ *
+ * SECURITY REQUIREMENT (server-side config, not enforceable from the client):
+ * this bucket MUST be PRIVATE with row-level security so a user can only read
+ * their own `${userId}/...` objects. The client uploads only encrypted
+ * backups (see CloudSyncService.uploadBackup) and reads via short-lived
+ * signed URLs — never `getPublicUrl`. A public bucket would expose every
+ * patient's PHI to anyone who can guess a path.
  */
 export const BACKUP_BUCKET = 'recover-backups';
 

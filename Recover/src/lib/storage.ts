@@ -55,12 +55,9 @@ export const storage = {
         await migrateFromLocalStorage(key);
 
         const { value } = await Preferences.get({ key });
-        console.log(`[Storage] GET ${key}:`, value ? `${value.substring(0, 100)}...` : 'null');
         return value;
       } else {
-        const value = localStorage.getItem(key);
-        console.log(`[Storage] GET ${key}:`, value ? `${value.substring(0, 100)}...` : 'null');
-        return value;
+        return localStorage.getItem(key);
       }
     } catch (error) {
       console.error(`[Storage] Error getting ${key}:`, error);
@@ -75,10 +72,8 @@ export const storage = {
     try {
       if (isNative) {
         await Preferences.set({ key, value });
-        console.log(`[Storage] SET ${key}:`, value.substring(0, 100) + '...');
       } else {
         localStorage.setItem(key, value);
-        console.log(`[Storage] SET ${key}:`, value.substring(0, 100) + '...');
       }
     } catch (error) {
       console.error(`[Storage] Error setting ${key}:`, error);
@@ -93,10 +88,8 @@ export const storage = {
     try {
       if (isNative) {
         await Preferences.remove({ key });
-        console.log(`[Storage] REMOVE ${key}`);
       } else {
         localStorage.removeItem(key);
-        console.log(`[Storage] REMOVE ${key}`);
       }
     } catch (error) {
       console.error(`[Storage] Error removing ${key}:`, error);

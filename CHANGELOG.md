@@ -5,6 +5,43 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-06-12
+
+### Security
+- Recover (patient app): all persisted PHI is now encrypted at rest with
+  AES-256-GCM. A non-extractable WebCrypto master key is held in IndexedDB so
+  its raw bytes never leave the crypto engine; every Zustand store (journal,
+  recovery, activities, settings, quotes, and facility messages/treatment
+  plan) is transparently encrypted, with legacy plaintext migrated on first
+  write
+- Recover: Android `allowBackup="false"` + `fullBackupContent="false"` +
+  `dataExtractionRules` excluding all domains — patient data can no longer be
+  extracted via `adb backup` or Android cloud/device-transfer backups
+- Recover: cloud backups can no longer be uploaded unencrypted, are addressed
+  by short-lived **signed** URLs instead of public URLs (a public bucket would
+  expose any patient's PHI by path guessing), and use a random per-backup
+  PBKDF2 salt instead of a salt derived from the password
+- Recover: PIN unlock now uses PBKDF2-SHA-256 (100k iterations, random salt,
+  constant-time compare) instead of a reversible 32-bit non-cryptographic hash
+- Recover: lock-screen notifications no longer disclose PHI — meeting names
+  and "N days sober" milestone counts are replaced with generic text; the
+  specifics travel only in the notification payload surfaced inside the app
+- Recover: on-device auto-backups (the full app dataset) are now encrypted at
+  rest like the live stores — previously they were written to localStorage as
+  plaintext JSON, bypassing encryption entirely
+- Recover: "Delete all data" now performs a real device wipe — clears every
+  store and sync/device/biometric key and crypto-shreds the master key
+  (previously it only removed a single unused legacy key)
+- Recover: a failed decrypt no longer silently overwrites the unreadable
+  ciphertext on the next write, preventing a transient key error from causing
+  permanent data loss
+- Recover: storage layer no longer logs PHI fragments to the console
+
+### Added
+- `src/lib/device-encryption.ts` (master key + AES-GCM encrypt/decrypt +
+  crypto-shred), `src/lib/encrypted-storage.ts` (Zustand persistence adapter),
+  and `src/lib/device-wipe.ts` in the Recover app, with unit tests
+
 ## [1.8.0] - 2026-06-12
 
 ### Security
