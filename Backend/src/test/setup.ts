@@ -70,6 +70,9 @@ vi.mock('../lib/metrics.js', () => ({
 
 vi.mock('../middleware/security.js', () => ({
   registerSecurityMiddleware: vi.fn().mockResolvedValue(undefined),
+  checkBruteForce: vi.fn().mockResolvedValue({ allowed: true, remainingAttempts: 5, lockedUntil: null }),
+  recordFailedLogin: vi.fn().mockResolvedValue(undefined),
+  resetLoginAttempts: vi.fn(),
 }))
 
 vi.mock('../middleware/sanitize.js', () => ({
@@ -154,6 +157,7 @@ export function makeStaff(overrides: Record<string, any> = {}) {
     lastLoginAt: null,
     twoFactorEnabled: false,
     twoFactorSecret: null,
+    tokenVersion: 0,
     facility: { id: 'facility-1', name: 'Test Facility' },
     ...overrides,
   }

@@ -1,10 +1,66 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, session } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
+import { pathToFileURL } from 'url';
 
 let mainWindow: BrowserWindow | null = null;
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+
+// The single origin the renderer is allowed to navigate within: the dev
+// server in development, or the packaged renderer directory in production.
+// Navigation anywhere else (incl. arbitrary file:// paths) is blocked.
+const APP_ORIGIN = isDev
+  ? 'http://localhost:5173'
+  : pathToFileURL(path.join(__dirname, '../renderer')).toString();
+
+function isAllowedNavigation(targetUrl: string): boolean {
+  return targetUrl.startsWith(APP_ORIGIN);
+}
+
+// ============================================================================
+// SECURITY HARDENING
+// ============================================================================
+
+/**
+ * Lock down a webContents: block in-app navigation away from the app origin,
+ * deny new-window creation (open safe external links in the OS browser), and
+ * deny all permission/device requests. Applied to every webContents created.
+ */
+function hardenWebContents(contents: Electron.WebContents): void {
+  // Block navigations to anything other than the app's own origin.
+  contents.on('will-navigate', (event, url) => {
+    if (!isAllowedNavigation(url)) {
+      event.preventDefault();
+    }
+  });
+
+  // Never let the renderer spawn new Electron windows pointing at remote
+  // content. http(s) links open in the user's real browser. The app's own
+  // blank popups (used to build the print/export view) are allowed but
+  // inherit the parent's hardened webPreferences.
+  contents.setWindowOpenHandler(({ url }) => {
+    if (url === '' || url === 'about:blank') {
+      return { action: 'allow' };
+    }
+    if (/^https?:\/\//i.test(url)) {
+      void shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
+  // Block <webview> embedding entirely.
+  contents.on('will-attach-webview', (event) => {
+    event.preventDefault();
+  });
+
+  // Deny redirects that leave the app origin.
+  contents.on('will-redirect', (event, url) => {
+    if (!isAllowedNavigation(url)) {
+      event.preventDefault();
+    }
+  });
+}
 
 // ============================================================================
 // AUTO-UPDATER CONFIGURATION
@@ -15,6 +71,13 @@ function setupAutoUpdater() {
     console.log('Auto-updater disabled in development mode');
     return;
   }
+
+  // SECURITY: electron-updater only verifies update-package signatures when
+  // the app itself is code-signed. Before shipping auto-updates, the macOS
+  // build MUST be signed + notarized and the Windows build MUST be
+  // Authenticode-signed (configure signing identities in electron-builder via
+  // CI secrets). Do NOT enable auto-update from an unsigned/ad-hoc build —
+  // an unsigned channel can ship malicious updates.
 
   // Configure auto-updater
   autoUpdater.autoDownload = false;
@@ -105,6 +168,9 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
       preload: path.join(__dirname, 'preload.js'),
     },
     titleBarStyle: 'hiddenInset',
@@ -119,6 +185,8 @@ function createWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
+
+  hardenWebContents(mainWindow.webContents);
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
@@ -147,6 +215,18 @@ if (!gotTheLock) {
   });
 
   app.whenReady().then(() => {
+    // Deny all permission/device requests (camera, mic, geolocation, USB, …);
+    // this clinical app needs none of them.
+    session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => {
+      callback(false);
+    });
+    session.defaultSession.setPermissionCheckHandler(() => false);
+
+    // Harden every webContents that gets created (defense in depth).
+    app.on('web-contents-created', (_event, contents) => {
+      hardenWebContents(contents);
+    });
+
     createWindow();
     setupAutoUpdater();
   });

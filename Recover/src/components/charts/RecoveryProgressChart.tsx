@@ -77,6 +77,12 @@ export const RecoveryProgressChart = memo(function RecoveryProgressChart({ recov
     return data;
   }, [recoveryStartDate, setbacks]);
 
+  // Memoize computed values. These hooks MUST run on every render (before any
+  // early return) so the hook order is stable — React throws otherwise.
+  const totalDays = useMemo(() => (data.length ? data[data.length - 1].totalDays : 0), [data]);
+  const slipCount = useMemo(() => setbacks.filter(s => s.type === 'slip').length, [setbacks]);
+  const relapseCount = useMemo(() => setbacks.filter(s => s.type === 'relapse').length, [setbacks]);
+
   if (data.length === 0) {
     return (
       <Card>
@@ -94,11 +100,6 @@ export const RecoveryProgressChart = memo(function RecoveryProgressChart({ recov
       </Card>
     );
   }
-
-  // Memoize computed values
-  const totalDays = useMemo(() => data[data.length - 1].totalDays, [data]);
-  const slipCount = useMemo(() => setbacks.filter(s => s.type === 'slip').length, [setbacks]);
-  const relapseCount = useMemo(() => setbacks.filter(s => s.type === 'relapse').length, [setbacks]);
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload }: any) => {

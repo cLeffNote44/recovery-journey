@@ -67,6 +67,9 @@ model Staff {
   lastLoginAt   DateTime? @map("last_login_at")
   failedLoginAttempts Int @default(0) @map("failed_login_attempts")
   lockedUntil   DateTime? @map("locked_until")
+  // Bumped to immediately invalidate all previously-issued access tokens
+  // (deactivation, role change, password reset).
+  tokenVersion  Int       @default(0) @map("token_version")
 
   // Two-Factor Authentication
   twoFactorSecret   String?   @map("two_factor_secret")
@@ -549,6 +552,11 @@ model AuditLog {
   // Outcome
   success       Boolean  @default(true)
   errorMessage  String?  @map("error_message")
+
+  // Tamper-evidence: keyed HMAC (AUDIT_SECRET) over the row's canonical
+  // contents. Detects in-place edits of an individual row. (Detecting
+  // deletes/reordering requires a hash chain — tracked as future work.)
+  hash          String?
 
   timestamp     DateTime @default(now())
 

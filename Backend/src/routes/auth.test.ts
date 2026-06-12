@@ -175,6 +175,25 @@ describe('Auth Routes', () => {
 
       expect(res.statusCode).toBe(400)
     })
+
+    it('rejects login when IP/identifier brute-force protection trips', async () => {
+      const { checkBruteForce } = await import('../middleware/security.js')
+      ;(checkBruteForce as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        allowed: false,
+        remainingAttempts: 0,
+        lockedUntil: Date.now() + 60_000,
+      })
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/staff/login',
+        payload: { email: 'clinician@test.com', password: 'whatever' },
+      })
+
+      expect(res.statusCode).toBe(401)
+      // Must short-circuit before touching the database
+      expect(mockPrisma.staff.findUnique).not.toHaveBeenCalled()
+    })
   })
 
   // ─── Two-Factor Login ─────────────────────────────────────────────────────
@@ -259,6 +278,28 @@ describe('Auth Routes', () => {
       expect(mockPrisma.refreshToken.create).not.toHaveBeenCalled()
     })
 
+    it('throttles 2FA code attempts by ip + staff id', async () => {
+      const { checkBruteForce } = await import('../middleware/security.js')
+      ;(checkBruteForce as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        allowed: false,
+        remainingAttempts: 0,
+        lockedUntil: Date.now() + 60_000,
+      })
+
+      const pendingToken = app.jwt.sign({ id: 'staff-1', type: '2fa_pending' as const }, { expiresIn: '5m' })
+      mockPrisma.staff.findUnique.mockResolvedValue(make2faStaff())
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/staff/login/2fa',
+        payload: { pendingToken, code: '000000' },
+      })
+
+      expect(res.statusCode).toBe(401)
+      // Rate-limited before any TOTP validation / DB write
+      expect(mockPrisma.staff.update).not.toHaveBeenCalled()
+    })
+
     it('rejects a regular access token as pending token', async () => {
       mockPrisma.staff.findUnique.mockResolvedValue(make2faStaff())
 
@@ -268,6 +309,7 @@ describe('Auth Routes', () => {
         email: 'clinician@test.com',
         role: 'COUNSELOR',
         facilityId: 'facility-1',
+        tokenVersion: 0,
       })
 
       const res = await app.inject({

@@ -5,6 +5,47 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-06-12
+
+### Security
+- Access-token revocation: staff access tokens now carry a `tokenVersion`, and
+  `requireStaff` re-validates the token against the live staff record (status +
+  tokenVersion) on every request — a deactivated or role-changed staff member
+  loses access immediately instead of at token expiry. Deactivation bumps
+  `tokenVersion` (invalidating all outstanding access tokens) in addition to
+  revoking refresh tokens.
+- IP + identifier brute-force throttling is now wired into staff login (the
+  existing `checkBruteForce`/`recordFailedLogin` helpers were never called),
+  layered on top of the per-account DB lockout.
+- Audit logs are tamper-evident: each row stores a keyed HMAC (AUDIT_SECRET)
+  over its canonical contents, so after-the-fact in-place edits of a row are
+  detectable. (A hash chain for delete/reorder detection, and same-transaction
+  "fail the request if the audit write fails" enforcement, are tracked as
+  follow-ups — the latter requires wrapping each mutation and its audit row in
+  one transaction to avoid leaving a committed-but-unaudited partial state.)
+- Journey (Electron): the renderer is hardened with `sandbox: true` +
+  `webSecurity: true`; navigation and redirects are locked to the app origin;
+  new-window creation is denied (http(s) links open in the OS browser);
+  `<webview>` embedding is blocked; and all permission/device requests are
+  denied. The auto-update code-signing requirement is documented in main.ts.
+
+### Fixed
+- Recover: `RecoveryProgressChart` called `useMemo` after an early return
+  (conditional hooks — a React "rendered fewer hooks" crash risk); the memos
+  now run unconditionally.
+- Recover: the `HomeScreen` and `SettingsScreen` test suites imported
+  `react-router-dom` (the app uses Wouter) and never loaded — fixed; both run.
+
+### Added
+- Recover: a `lint` script (the workspace had none, so CI's recover-lint job
+  silently did nothing); fixed all 10 lint errors it surfaced (a conditional
+  hook, a `require()` in module code, `prefer-const`, `no-case-declarations`).
+- Journey E2E (Playwright) now runs in CI and gates merges via `ci-success`.
+
+### Changed
+- Backend: Prisma migration `20260612000000_token_version_and_audit_hash` adds
+  `staff.token_version` and `audit_logs.hash` (additive, non-breaking).
+
 ## [1.9.0] - 2026-06-12
 
 ### Security

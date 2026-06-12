@@ -342,7 +342,9 @@ export async function adminRoutes(fastify: FastifyInstance) {
 
     await prisma.staff.update({
       where: { id },
-      data: { status: 'INACTIVE' }
+      // Bump tokenVersion so any outstanding access token is rejected at the
+      // next request (requireStaff re-check), not just at expiry.
+      data: { status: 'INACTIVE', tokenVersion: { increment: 1 } }
     })
 
     // Revoke all refresh tokens

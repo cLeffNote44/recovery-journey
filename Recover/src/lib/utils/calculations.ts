@@ -28,7 +28,7 @@ export function calculateStreak(checkIns: CheckIn[]): number {
   );
 
   let streak = 0;
-  let currentDate = new Date();
+  const currentDate = new Date();
   currentDate.setHours(0, 0, 0, 0);
 
   for (const checkIn of sortedCheckIns) {

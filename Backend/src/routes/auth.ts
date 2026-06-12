@@ -7,6 +7,7 @@ import { prisma } from '../lib/prisma.js'
 import { ApiError } from '../lib/error-handler.js'
 import { AuditLogger } from '../lib/audit-log.js'
 import { validateTotpCode } from '../lib/totp.js'
+import { checkBruteForce, recordFailedLogin, resetLoginAttempts } from '../middleware/security.js'
 import type { JwtPayload } from '../middleware/auth.js'
 import { config } from '../config/env.js'
 
@@ -57,6 +58,7 @@ interface StaffForTokens {
   firstName: string
   lastName: string
   facilityId: string | null
+  tokenVersion: number
   facility: { name: string } | null
 }
 
@@ -70,7 +72,8 @@ export async function authRoutes(fastify: FastifyInstance) {
       id: staff.id,
       email: staff.email,
       role: staff.role,
-      facilityId: staff.facilityId
+      facilityId: staff.facilityId,
+      tokenVersion: staff.tokenVersion
     })
 
     const refreshToken = nanoid(64)
@@ -109,6 +112,14 @@ export async function authRoutes(fastify: FastifyInstance) {
     const body = staffLoginSchema.parse(request.body)
     const audit = AuditLogger.fromRequest(request)
 
+    // IP + identifier brute-force throttling (in addition to the per-account
+    // DB lockout below). Stops password spraying from a single source.
+    const bruteForce = await checkBruteForce(body.email.toLowerCase(), request.ip)
+    if (!bruteForce.allowed) {
+      await audit.loginFailed(body.email, 'Too many attempts (rate limited)')
+      throw ApiError.unauthorized('Too many login attempts. Please try again later.')
+    }
+
     // Find staff by email
     const staff = await prisma.staff.findUnique({
       where: { email: body.email.toLowerCase() },
@@ -116,18 +127,22 @@ export async function authRoutes(fastify: FastifyInstance) {
     })
 
     if (!staff) {
+      await recordFailedLogin(body.email.toLowerCase(), request.ip)
       await audit.loginFailed(body.email, 'User not found')
       throw ApiError.unauthorized('Invalid email or password')
     }
 
     // Check if account is locked
     if (staff.lockedUntil && staff.lockedUntil > new Date()) {
+      await recordFailedLogin(body.email.toLowerCase(), request.ip)
       await audit.loginFailed(body.email, 'Account locked')
       throw ApiError.unauthorized('Account is temporarily locked. Please try again later.')
     }
 
-    // Check if account is active
+    // Check if account is active. Record the attempt so a disabled account's
+    // email can't be used as an un-throttled probe.
     if (staff.status !== 'ACTIVE') {
+      await recordFailedLogin(body.email.toLowerCase(), request.ip)
       await audit.loginFailed(body.email, 'Account inactive')
       throw ApiError.unauthorized('Account is not active')
     }
@@ -147,9 +162,13 @@ export async function authRoutes(fastify: FastifyInstance) {
         data: { failedLoginAttempts: failedAttempts, lockedUntil }
       })
 
+      await recordFailedLogin(body.email.toLowerCase(), request.ip)
       await audit.loginFailed(body.email, 'Invalid password')
       throw ApiError.unauthorized('Invalid email or password')
     }
+
+    // Password correct — clear the IP/identifier brute-force counter
+    resetLoginAttempts(body.email.toLowerCase(), request.ip)
 
     // If 2FA is enabled, a correct password is not a complete login.
     // Issue a short-lived pending token that can only be exchanged for real
@@ -209,7 +228,15 @@ export async function authRoutes(fastify: FastifyInstance) {
       throw ApiError.unauthorized('Invalid two-factor session')
     }
 
+    // IP throttling for the 6-digit TOTP guessing space, keyed on the staff id.
+    const bruteForce = await checkBruteForce(`2fa:${staff.id}`, request.ip)
+    if (!bruteForce.allowed) {
+      await audit.loginFailed(staff.email, 'Too many 2FA attempts (rate limited)')
+      throw ApiError.unauthorized('Too many attempts. Please try again later.')
+    }
+
     if (staff.lockedUntil && staff.lockedUntil > new Date()) {
+      await recordFailedLogin(`2fa:${staff.id}`, request.ip)
       await audit.loginFailed(staff.email, 'Account locked')
       throw ApiError.unauthorized('Account is temporarily locked. Please try again later.')
     }
@@ -226,9 +253,12 @@ export async function authRoutes(fastify: FastifyInstance) {
         data: { failedLoginAttempts: failedAttempts, lockedUntil }
       })
 
+      await recordFailedLogin(`2fa:${staff.id}`, request.ip)
       await audit.loginFailed(staff.email, 'Invalid 2FA code')
       throw ApiError.unauthorized('Invalid two-factor code')
     }
+
+    resetLoginAttempts(`2fa:${staff.id}`, request.ip)
 
     await prisma.staff.update({
       where: { id: staff.id },
@@ -383,7 +413,8 @@ export async function authRoutes(fastify: FastifyInstance) {
       id: tokenRecord.staff.id,
       email: tokenRecord.staff.email,
       role: tokenRecord.staff.role,
-      facilityId: tokenRecord.staff.facilityId
+      facilityId: tokenRecord.staff.facilityId,
+      tokenVersion: tokenRecord.staff.tokenVersion
     })
 
     const newRefreshToken = nanoid(64)

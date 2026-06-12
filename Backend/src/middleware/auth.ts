@@ -8,6 +8,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify'
 import type { StaffRole } from '@prisma/client'
 import { ApiError } from '../lib/error-handler.js'
+import { prisma } from '../lib/prisma.js'
 
 // JWT payload types
 export interface StaffJwtPayload {
@@ -15,6 +16,7 @@ export interface StaffJwtPayload {
   email: string
   role: StaffRole
   facilityId: string | null
+  tokenVersion: number
 }
 
 export interface PatientJwtPayload {
@@ -70,7 +72,12 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
 }
 
 /**
- * Require staff authentication (not patient)
+ * Require staff authentication (not patient).
+ *
+ * Re-validates the access token against the live staff record so that a
+ * deactivated, deleted, or role-changed staff member loses access
+ * immediately rather than at token expiry. Bumping `tokenVersion`
+ * (deactivate/role change/password reset) invalidates all outstanding tokens.
  */
 export async function requireStaff(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   await authenticate(request, reply)
@@ -78,6 +85,24 @@ export async function requireStaff(request: FastifyRequest, reply: FastifyReply)
   if (!request.staffUser) {
     throw ApiError.forbidden('Staff access required')
   }
+
+  const staff = await prisma.staff.findUnique({
+    where: { id: request.staffUser.id },
+    select: { status: true, role: true, facilityId: true, tokenVersion: true }
+  })
+
+  if (!staff || staff.status !== 'ACTIVE') {
+    throw ApiError.unauthorized('Account is not active')
+  }
+
+  if (staff.tokenVersion !== request.staffUser.tokenVersion) {
+    throw ApiError.unauthorized('Session has been revoked. Please log in again.')
+  }
+
+  // Reflect current role/facility from the DB (in case they changed since the
+  // token was issued) so downstream authorization uses live values.
+  request.staffUser.role = staff.role
+  request.staffUser.facilityId = staff.facilityId
 }
 
 /**

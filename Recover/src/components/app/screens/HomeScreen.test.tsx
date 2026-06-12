@@ -18,7 +18,7 @@ import { useRecoveryStore } from '@/stores/useRecoveryStore';
 import { useJournalStore } from '@/stores/useJournalStore';
 import { useActivitiesStore } from '@/stores/useActivitiesStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
-import { BrowserRouter } from 'react-router-dom';
+import { Router } from 'wouter';
 
 // Mock the celebration and quote functions
 vi.mock('@/lib/celebrations', () => ({
@@ -49,9 +49,9 @@ vi.mock('recharts', () => ({
 // Helper to wrap component with Router
 const renderWithRouter = (component: React.ReactElement) => {
   return render(
-    <BrowserRouter>
+    <Router>
       {component}
-    </BrowserRouter>
+    </Router>
   );
 };
 
