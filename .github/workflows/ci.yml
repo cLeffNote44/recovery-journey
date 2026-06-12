@@ -461,7 +461,14 @@ jobs:
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        # Only publish to code scanning on pushes to the default branches.
+        # On pull requests this avoids a hard-failing "Trivy" code-scanning
+        # check for pre-existing dependency CVEs that predate the PR —
+        # consistent with the dependency-audit jobs, which are already
+        # informational (continue-on-error). The scan itself still runs on
+        # PRs, so findings remain visible in the job logs, and code scanning
+        # is still updated on pushes to main/develop.
+        if: always() && github.event_name == 'push'
         with:
           sarif_file: 'trivy-results.sarif'
 
