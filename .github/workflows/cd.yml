@@ -16,10 +16,12 @@ on:
           - staging
           - production
 
+# Default to read-only; jobs that need more declare it explicitly
+permissions:
+  contents: read
+
 env:
   NODE_VERSION: '20'
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   # ===========================================
@@ -31,8 +33,17 @@ jobs:
     outputs:
       environment: ${{ steps.set-env.outputs.environment }}
       version: ${{ steps.set-version.outputs.version }}
+      image: ${{ steps.set-image.outputs.image }}
 
     steps:
+      - name: Guard production dispatch
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" == "production" && "${{ github.ref }}" != "refs/heads/main" ]]; then
+            echo "::error::Manual production deployments must be dispatched from main (got ${{ github.ref }})"
+            exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -55,10 +66,16 @@ jobs:
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             VERSION=${GITHUB_REF#refs/tags/v}
           else
-            VERSION=$(git describe --tags --always --dirty)
+            VERSION=$(git describe --tags --always)
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Deploying version: $VERSION"
+
+      - name: Set image name
+        id: set-image
+        run: |
+          # Registry repositories must be lowercase
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}/backend" >> $GITHUB_OUTPUT
 
   # ===========================================
   # Build and Push Docker Images
@@ -81,7 +98,7 @@ jobs:
       - name: Log in to Container Registry
         uses: docker/login-action@v4
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -89,10 +106,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
+          images: ${{ needs.setup.outputs.image }}
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha
@@ -102,8 +118,14 @@ jobs:
         with:
           context: ./Backend
           file: ./Backend/Dockerfile
+          target: production
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          # The explicit version tag is what the deploy step pulls — it must
+          # match needs.setup.outputs.version exactly so the image deployed
+          # is the image built from this commit.
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ${{ needs.setup.outputs.image }}:${{ needs.setup.outputs.version }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -111,139 +133,154 @@ jobs:
             VERSION=${{ needs.setup.outputs.version }}
 
   # ===========================================
-  # Database Migrations
+  # Deploy (staging on main pushes, production on v* tags)
   # ===========================================
-  migrate-database:
-    name: Run Database Migrations
+  deploy:
+    name: Deploy to ${{ needs.setup.outputs.environment }}
     runs-on: ubuntu-latest
     needs: [setup, build-backend]
-    environment: ${{ needs.setup.outputs.environment }}
+    # packages: read lets the GITHUB_TOKEN piped to the deploy host pull the
+    # (private) backend image from GHCR
+    permissions:
+      contents: read
+      packages: read
+    # Never run two deploys against the same host at once
+    concurrency:
+      group: deploy-${{ needs.setup.outputs.environment }}
+      cancel-in-progress: false
+    environment:
+      name: ${{ needs.setup.outputs.environment }}
+      url: ${{ needs.setup.outputs.environment == 'production' && 'https://recoveryjourney.app' || 'https://staging.recoveryjourney.app' }}
+    env:
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+      STAGING_HOST: ${{ secrets.STAGING_HOST }}
+      API_URL: ${{ needs.setup.outputs.environment == 'production' && 'https://api.recoveryjourney.app' || 'https://staging-api.recoveryjourney.app' }}
+      ENV_NAME: ${{ needs.setup.outputs.environment }}
+      VERSION: ${{ needs.setup.outputs.version }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: './Backend/package-lock.json'
-
-      - name: Install dependencies
-        working-directory: ./Backend
-        run: npm ci
-
-      - name: Generate Prisma client
-        working-directory: ./Backend
-        run: npx prisma generate
-
-      - name: Create pre-migration database backup
+      # Fail closed: a missing host secret must abort, never silently fall
+      # back to the other environment's host.
+      - name: Resolve deploy host
         run: |
-          set -euo pipefail
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          BACKUP_FILE="/tmp/pre_migration_${TIMESTAMP}.sql.gz"
-          echo "Creating pre-migration backup..."
-          pg_dump "${{ secrets.DATABASE_URL }}" --no-owner --no-privileges | gzip > "$BACKUP_FILE"
-          if [[ ! -s "$BACKUP_FILE" ]]; then
-            echo "::error::Pre-migration backup is empty or failed"
+          if [ "$ENV_NAME" = "production" ]; then
+            HOST="$PRODUCTION_HOST"
+          else
+            HOST="$STAGING_HOST"
+          fi
+          if [ -z "$HOST" ]; then
+            echo "::error::Host secret for environment '$ENV_NAME' is not set"
             exit 1
           fi
-          echo "Pre-migration backup created: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-      - name: Run migrations
-        working-directory: ./Backend
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-  # ===========================================
-  # Deploy to Staging
-  # ===========================================
-  deploy-staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: [setup, build-backend, migrate-database]
-    if: needs.setup.outputs.environment == 'staging'
-    environment:
-      name: staging
-      url: https://staging.recoveryjourney.app
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+          echo "DEPLOY_HOST=$HOST" >> $GITHUB_ENV
 
       - name: Setup SSH
         env:
           DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
         run: |
+          if [ -z "$KNOWN_HOSTS" ]; then
+            echo "::error::SSH_KNOWN_HOSTS secret is required (run 'ssh-keyscan <host>' for each deploy host and store the output)"
+            exit 1
+          fi
           mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
-      - name: Capture current version and backup database
-        env:
-          DEPLOY_HOST: ${{ secrets.STAGING_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      - name: Capture currently deployed version
         run: |
-          PREVIOUS_VERSION=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} \
-            'cd /opt/recovery-journey && git describe --tags --always 2>/dev/null || echo "none"')
+          PREVIOUS_VERSION=$(ssh -o StrictHostKeyChecking=yes -i ~/.ssh/deploy_key "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            'cat /opt/recovery-journey/.deployed_version 2>/dev/null || echo "none"')
           echo "PREVIOUS_VERSION=${PREVIOUS_VERSION}" >> $GITHUB_ENV
           echo "Previous version: ${PREVIOUS_VERSION}"
 
-          echo "Creating pre-deployment database backup..."
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} \
-            'cd /opt/recovery-journey && ./scripts/backup.sh staging --quiet || echo "Backup warning (non-fatal)"'
-
-      - name: Deploy to staging
+      - name: Log in to registry on deploy host
         env:
-          DEPLOY_HOST: ${{ secrets.STAGING_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Deploying version ${{ needs.setup.outputs.version }} to staging..."
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
+          printf '%s' "$GH_TOKEN" | ssh -o StrictHostKeyChecking=yes -i ~/.ssh/deploy_key "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "docker login ghcr.io -u '${{ github.actor }}' --password-stdin"
+
+      - name: Deploy
+        run: |
+          echo "Deploying version ${VERSION} to ${ENV_NAME}..."
+          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/deploy_key "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' << 'EOF'
+            set -euo pipefail
             cd /opt/recovery-journey
-            git fetch --tags
-            git checkout ${{ needs.setup.outputs.version }}
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
-            docker compose -f docker-compose.prod.yml exec -T backend npx prisma migrate deploy
+
+            # Sync compose files & scripts to the deployed commit first so the
+            # backup and deploy below run the reviewed versions.
+            git fetch origin --tags --prune --force
+            git checkout --detach ${{ github.sha }}
+
+            # Pre-deployment backup — a deploy without a fresh backup is not
+            # allowed to proceed (HIPAA: recoverability).
+            ./scripts/backup.sh ${{ needs.setup.outputs.environment }} --quiet
+
+            export BACKEND_IMAGE_TAG='${{ needs.setup.outputs.version }}'
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull backend
+            # < /dev/null is required: this script arrives on the host via
+            # `bash -s` stdin, and `compose run` attaches stdin by default —
+            # it would consume the remaining script lines into the container.
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm migrate < /dev/null
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-build --remove-orphans db backend
+
+            if [ -f .deployed_version ]; then cp .deployed_version .deployed_version.previous; fi
+            echo '${{ needs.setup.outputs.version }}' > .deployed_version
           EOF
 
       - name: Verify deployment
         id: health_check
         run: |
-          echo "Verifying staging deployment..."
+          echo "Verifying ${ENV_NAME} deployment..."
           sleep 15
+
+          echo "Checking backend health on the deploy host..."
           for i in 1 2 3; do
-            if curl -sf https://staging-api.recoveryjourney.app/health; then
-              echo "Health check passed (attempt $i)"
-              exit 0
+            if ssh -o StrictHostKeyChecking=yes -i ~/.ssh/deploy_key "${DEPLOY_USER}@${DEPLOY_HOST}" \
+              'curl -sf http://localhost:8000/health > /dev/null'; then
+              echo "Local health check passed (attempt $i)"
+              break
             fi
-            echo "Health check failed (attempt $i/3), retrying in 10s..."
+            if [ "$i" = "3" ]; then
+              echo "::error::Local health check failed after 3 attempts"
+              exit 1
+            fi
+            echo "Local health check failed (attempt $i/3), retrying in 10s..."
             sleep 10
           done
-          echo "Health check failed after 3 attempts"
+
+          echo "Checking public endpoint..."
+          for i in 1 2 3; do
+            if curl -sf "${API_URL}/health" > /dev/null; then
+              echo "Public health check passed (attempt $i)"
+              exit 0
+            fi
+            echo "Public health check failed (attempt $i/3), retrying in 10s..."
+            sleep 10
+          done
+          echo "::error::Public health check failed after 3 attempts"
           exit 1
 
       - name: Rollback on failure
         if: failure() && steps.health_check.outcome == 'failure'
-        env:
-          DEPLOY_HOST: ${{ secrets.STAGING_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           echo "::error::Deployment failed — rolling back to ${PREVIOUS_VERSION}"
           if [ "${PREVIOUS_VERSION}" != "none" ]; then
-            ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
+            ssh -o StrictHostKeyChecking=yes -i ~/.ssh/deploy_key "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' << EOF
+              set -euo pipefail
               cd /opt/recovery-journey
-              git checkout ${PREVIOUS_VERSION}
-              docker compose -f docker-compose.prod.yml up -d --remove-orphans
-            EOF
+              export BACKEND_IMAGE_TAG='${PREVIOUS_VERSION}'
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml pull backend || true
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-build --no-deps backend
+              echo '${PREVIOUS_VERSION}' > .deployed_version
+          EOF
             echo "Rolled back to ${PREVIOUS_VERSION}"
           else
-            echo "::warning::No previous version to roll back to"
+            echo "::error::No previous version recorded — the failed deploy is still live and needs manual intervention"
           fi
 
       - name: Cleanup SSH
@@ -252,119 +289,31 @@ jobs:
 
       - name: Notify deployment success
         if: success()
-        run: echo "Staging deployment of ${{ needs.setup.outputs.version }} successful!"
+        run: echo "${ENV_NAME} deployment of ${VERSION} successful!"
 
       - name: Notify deployment failure
         if: failure()
-        run: echo "::error::Staging deployment FAILED for version ${{ needs.setup.outputs.version }}"
+        run: echo "::error::${ENV_NAME} deployment FAILED for version ${VERSION}"
 
   # ===========================================
-  # Deploy to Production
+  # GitHub Release (tagged production deploys)
   # ===========================================
-  deploy-production:
-    name: Deploy to Production
+  release:
+    name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [setup, build-backend, migrate-database]
-    if: needs.setup.outputs.environment == 'production'
-    environment:
-      name: production
-      url: https://recoveryjourney.app
+    needs: [setup, deploy]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup SSH
-        env:
-          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-      - name: Capture current version and backup database
-        env:
-          DEPLOY_HOST: ${{ secrets.PRODUCTION_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: |
-          PREVIOUS_VERSION=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} \
-            'cd /opt/recovery-journey && git describe --tags --always 2>/dev/null || echo "none"')
-          echo "PREVIOUS_VERSION=${PREVIOUS_VERSION}" >> $GITHUB_ENV
-          echo "Previous version: ${PREVIOUS_VERSION}"
-
-          echo "Creating pre-deployment database backup..."
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} \
-            'cd /opt/recovery-journey && ./scripts/backup.sh production --quiet || echo "Backup warning (non-fatal)"'
-
-      - name: Deploy to production
-        env:
-          DEPLOY_HOST: ${{ secrets.PRODUCTION_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: |
-          echo "Deploying version ${{ needs.setup.outputs.version }} to production..."
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
-            cd /opt/recovery-journey
-            git fetch --tags
-            git checkout ${{ needs.setup.outputs.version }}
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
-            docker compose -f docker-compose.prod.yml exec -T backend npx prisma migrate deploy
-          EOF
-
-      - name: Verify deployment
-        id: health_check
-        run: |
-          echo "Verifying production deployment..."
-          sleep 15
-          for i in 1 2 3; do
-            if curl -sf https://api.recoveryjourney.app/health; then
-              echo "Health check passed (attempt $i)"
-              exit 0
-            fi
-            echo "Health check failed (attempt $i/3), retrying in 10s..."
-            sleep 10
-          done
-          echo "Health check failed after 3 attempts"
-          exit 1
-
-      - name: Rollback on failure
-        if: failure() && steps.health_check.outcome == 'failure'
-        env:
-          DEPLOY_HOST: ${{ secrets.PRODUCTION_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: |
-          echo "::error::Production deployment failed — rolling back to ${PREVIOUS_VERSION}"
-          if [ "${PREVIOUS_VERSION}" != "none" ]; then
-            ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
-              cd /opt/recovery-journey
-              git checkout ${PREVIOUS_VERSION}
-              docker compose -f docker-compose.prod.yml up -d --remove-orphans
-            EOF
-            echo "Rolled back to ${PREVIOUS_VERSION}"
-          else
-            echo "::warning::No previous version to roll back to"
-          fi
-
-      - name: Cleanup SSH
-        if: always()
-        run: rm -f ~/.ssh/deploy_key
-
       - name: Create GitHub Release
-        if: success() && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Notify deployment success
-        if: success()
-        run: echo "Production deployment of ${{ needs.setup.outputs.version }} successful!"
-
-      - name: Notify deployment failure
-        if: failure()
-        run: echo "::error::Production deployment FAILED for version ${{ needs.setup.outputs.version }}"
 
   # ===========================================
   # Build Desktop App (Journey)

@@ -1,6 +1,7 @@
 # Multi-stage Dockerfile for Recover Clinician Portal
 # Stage 1: Base image with dependencies
-FROM node:18-alpine AS base
+# Node 22 is the active LTS line (Node 18 is end-of-life).
+FROM node:22-alpine AS base
 
 # Install dependencies needed for Electron builds
 RUN apk add --no-cache \
@@ -60,7 +61,7 @@ RUN npm run build
 # This stage is meant to be used with volume mounts to extract the built apps
 
 # Stage 5: Lightweight production image (serves built files)
-FROM node:18-alpine AS production
+FROM node:22-alpine AS production
 
 WORKDIR /app
 

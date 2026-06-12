@@ -11,7 +11,12 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Base image with Node.js
 # -----------------------------------------------------------------------------
-FROM node:25-alpine AS base
+# Node 22 is the active LTS line. Do not bump to odd-numbered (non-LTS)
+# releases; they receive no long-term security support.
+FROM node:22-alpine AS base
+
+# Label used by deploy.sh's `docker image prune --filter label=...`
+LABEL app="recovery-journey"
 
 # Install security updates and required packages
 RUN apk update && apk upgrade && \

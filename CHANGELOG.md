@@ -22,6 +22,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `POST /auth/staff/login/2fa` endpoint to complete a 2FA login
 - Two-factor code entry step in the Journey login page
 - Shared TOTP helper (`Backend/src/lib/totp.ts`) so 2FA parameters cannot drift between routes
+- Image-based deployments: the backend now deploys as a tagged GHCR image
+  (`ghcr.io/cleffnote44/recovery-journey/backend:<version>`) pulled on the
+  server, so the image tested in CI is the image that runs in production
+- Deployed-version tracking (`.deployed_version` / `.deployed_version.previous`)
+  makes `scripts/rollback.sh` an actual image-tag swap instead of a no-op rebuild
+- `deploy.sh --pull --image-tag <tag>` to deploy a registry tag without building
+- Container-aware backup/restore: `scripts/backup.sh` and `scripts/restore.sh`
+  dump/restore via `docker exec` when the database container is running
+  (the production database publishes no host port)
+
+### Fixed
+- Production compose invocation: `docker-compose.prod.yml` is an override and is
+  now always combined with the base file in CD, `deploy.sh`, and `rollback.sh`
+  (standalone invocation could not start the stack)
+- Compose override now uses `!reset` for `db.ports` and `backend.volumes` —
+  empty-list overrides were silently appended, leaving the database port
+  published and dev bind mounts active in production
+- Production compose now passes `ENCRYPTION_KEY`/`ENCRYPTION_SALT`/`AUDIT_SECRET`
+  to the backend container (startup previously exited: required in production)
+- `backup.sh` could never complete: log output corrupted the file paths returned
+  via command substitution (logs now go to stderr), and it rejected the
+  environment argument the CD pipeline and nightly cron pass
+- `restore.sh` could never restore an encrypted backup: the decrypted temp file
+  lost its `.gz` extension so decompression was skipped (verified end-to-end
+  against a live postgres: backup → drop → restore → data intact)
+- `deploy.sh` built the development image for production deploys (missing
+  `--target production`), ran vitest in watch mode (hung forever), and died in
+  its health-wait loop (`((var++))` returns non-zero under `set -e`)
+- CD checked out a non-existent git ref for tag deploys (`1.8.0` instead of the
+  tag's commit) and deployed a version label that matched no pushed image tag
+- Scheduled backup workflow now honors the manually selected environment,
+  verifies the exact encrypted file each run produced, and fails loudly
+- `compose run --rm migrate` reads stdin from /dev/null — when invoked through
+  `ssh bash -s` it would otherwise swallow the rest of the deploy script and
+  silently leave the old backend running against the new schema
+- Deploy/backup workflows fail closed when the target host secret is unset
+  instead of silently falling back to the other environment's host; deploys
+  are serialized per environment via a concurrency group
+- Staging/production env templates: `NODE_ENV=staging` (invalid enum, crashed
+  the backend), `CORS_ORIGIN` (backend reads `CORS_ORIGINS`), wrong port (3000
+  vs 8000), and dead variables the backend never reads
+
+### Changed
+- Database migrations run on the deploy host inside the compose network
+  (`compose run --rm migrate`) using the same image as the backend — the
+  production database is no longer expected to be reachable from GitHub runners
+- `prisma` moved from devDependencies to dependencies so the production image
+  contains the CLI that `migrate deploy` needs (no runtime npm download)
+- Pre-deployment backups are mandatory: CD aborts the deploy if the backup
+  fails (failures were previously masked as "non-fatal")
+- SSH host keys are pinned via the `SSH_KNOWN_HOSTS` secret;
+  `StrictHostKeyChecking=no` removed from all pipelines
+- Backend Docker image pinned to `node:22-alpine` (LTS — was non-LTS node:25);
+  Journey image moved off end-of-life `node:18-alpine`
+- Backup encryption keys are passed to openssl via the environment instead of
+  the command line; restore pre-dumps are now encrypted too
+- Workflow permissions scoped to least privilege (`contents: read` default);
+  manual production deploys must be dispatched from `main`
+- `.gitignore` now covers backup artifacts (`backups/`, dump patterns) and key
+  material (`*.pem`, `*.key`, `*.keystore`, `*.p12`)
+- Backend/root lockfiles regenerated (root was stale at 1.7.0)
 
 ## [1.7.2] - 2026-04-04
 

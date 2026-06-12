@@ -1,13 +1,21 @@
 # =============================================================================
 # Recovery Journey - Production Docker Compose Override
 # =============================================================================
-# Use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# This is an OVERRIDE file. It must always be combined with the base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml <command>
 #
 # This override:
-#   - Uses production build targets
+#   - Deploys the backend from a tagged registry image (BACKEND_IMAGE_TAG)
+#     instead of building from source, so rollback can swap tags
 #   - Removes volume mounts (uses built code)
-#   - Adds resource limits
-#   - Configures for production environment
+#   - Hides the database port (internal network only)
+#   - Adds resource limits and log rotation
+#   - Requires all production secrets (fails fast when unset)
+#
+# Variable substitution is read from the shell environment and from a
+# `.env` file in this directory (see deploy/production/.env.production
+# for the template). Set BACKEND_IMAGE_TAG to the version being deployed.
 # =============================================================================
 
 services:
@@ -29,13 +37,16 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
-    # Don't expose port in production (internal only)
-    ports: []
+    # Don't expose port in production (internal only).
+    # `!reset` is required — a plain empty list is appended to the base
+    # file's list and silently leaves the port published.
+    ports: !reset []
 
   # ---------------------------------------------------------------------------
   # Backend API Server (Production)
   # ---------------------------------------------------------------------------
   backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/cleffnote44/recovery-journey/backend}:${BACKEND_IMAGE_TAG:-latest}
     build:
       context: ./Backend
       target: production
@@ -54,8 +65,13 @@ services:
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
       AUDIT_LOG_RETENTION_DAYS: 2555
-    # Remove volume mounts in production
-    volumes: []
+      # HIPAA: required in production — backend exits at startup without them
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      ENCRYPTION_SALT: ${ENCRYPTION_SALT:-}
+      AUDIT_SECRET: ${AUDIT_SECRET:?AUDIT_SECRET is required}
+      REGISTRATION_KEY_EXPIRES_HOURS: ${REGISTRATION_KEY_EXPIRES_HOURS:-72}
+    # Remove dev bind mounts in production (`!reset` — see db.ports note)
+    volumes: !reset []
     deploy:
       resources:
         limits:
@@ -74,7 +90,11 @@ services:
   # ---------------------------------------------------------------------------
   # Migrations (Production)
   # ---------------------------------------------------------------------------
+  # Runs `npx prisma migrate deploy` (command inherited from the base file)
+  # using the same registry image as the backend, so the applied migrations
+  # always match the deployed code.
   migrate:
+    image: ${BACKEND_IMAGE:-ghcr.io/cleffnote44/recovery-journey/backend}:${BACKEND_IMAGE_TAG:-latest}
     build:
       context: ./Backend
       target: production

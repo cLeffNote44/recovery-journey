@@ -3,6 +3,13 @@
 # Recovery Journey Rollback Script
 # ==============================================
 # Usage: ./scripts/rollback.sh [staging|production] [version]
+#
+# Rolls the backend container back to a previously deployed image tag.
+# Deploys record their tag in .deployed_version / .deployed_version.previous
+# (written by scripts/deploy.sh and the CD pipeline), so rollback without
+# an explicit version targets the previous deploy.
+#
+# NOTE: database migrations are NOT rolled back automatically.
 # ==============================================
 
 set -euo pipefail
@@ -18,6 +25,12 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# Must match the image name used by deploy.sh and the CD pipeline
+BACKEND_IMAGE="${BACKEND_IMAGE:-ghcr.io/cleffnote44/recovery-journey/backend}"
+
+# docker-compose.prod.yml is an override and must be combined with the base
+COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.prod.yml)
+
 # Arguments
 ENVIRONMENT="${1:-}"
 TARGET_VERSION="${2:-}"
@@ -28,8 +41,8 @@ if [[ -z "$ENVIRONMENT" ]]; then
     echo ""
     echo "Arguments:"
     echo "  environment   Required. Target environment (staging or production)"
-    echo "  version       Optional. Specific version to rollback to"
-    echo "                If not provided, rolls back to the previous version"
+    echo "  version       Optional. Specific image tag to roll back to"
+    echo "                If not provided, rolls back to the previous deploy"
     exit 1
 fi
 
@@ -55,6 +68,31 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Compose command detection: prefer the v2 plugin, fall back to standalone —
+# but only v2: docker-compose.prod.yml uses the `!reset` tag, which Compose
+# v1 cannot parse (it would fail or silently misbehave).
+COMPOSE_CMD=()
+detect_compose() {
+    if docker compose version &> /dev/null; then
+        COMPOSE_CMD=(docker compose)
+    elif command -v docker-compose &> /dev/null; then
+        local cv
+        cv=$(docker-compose version --short 2>/dev/null || echo "0")
+        if [[ "$cv" == 1* || "$cv" == v1* || "$cv" == "0" ]]; then
+            log_error "docker-compose v1 detected ($cv) — Compose v2.24.4+ is required (the prod override uses !reset)"
+            exit 1
+        fi
+        COMPOSE_CMD=(docker-compose)
+    else
+        log_error "Neither 'docker compose' nor 'docker-compose' is available"
+        exit 1
+    fi
+}
+
+compose() {
+    "${COMPOSE_CMD[@]}" "${COMPOSE_FILES[@]}" "$@"
+}
+
 # Trap to alert on rollback failure
 on_rollback_failure() {
     local exit_code=$?
@@ -77,46 +115,60 @@ confirm_action() {
 }
 
 list_available_versions() {
-    log_info "Available versions:"
-    docker images "recovery-journey-backend" --format "table {{.Tag}}\t{{.CreatedAt}}" | head -20
+    log_info "Locally available image tags for $BACKEND_IMAGE:"
+    docker images "$BACKEND_IMAGE" --format "table {{.Tag}}\t{{.CreatedAt}}" | head -20
 }
 
 get_previous_version() {
-    # Get the second most recent tag (current is first)
-    docker images "recovery-journey-backend" --format "{{.Tag}}" | sed -n '2p'
+    # Preferred source: the version file maintained by deploys
+    if [[ -f "$PROJECT_ROOT/.deployed_version.previous" ]]; then
+        cat "$PROJECT_ROOT/.deployed_version.previous"
+        return 0
+    fi
+
+    # Fallback: second most recent local image tag (current is first).
+    # Exclude the environment alias tags, which always point at the
+    # currently deployed image.
+    docker images "$BACKEND_IMAGE" --format "{{.Tag}}" \
+        | grep -vE '^(staging|production|latest)$' \
+        | sed -n '2p'
+}
+
+ensure_image_available() {
+    local version="$1"
+
+    if docker image inspect "$BACKEND_IMAGE:$version" &> /dev/null; then
+        return 0
+    fi
+
+    log_info "Image $BACKEND_IMAGE:$version not found locally, pulling..."
+    if ! docker pull "$BACKEND_IMAGE:$version"; then
+        log_error "Image $BACKEND_IMAGE:$version is not available locally or in the registry"
+        exit 1
+    fi
 }
 
 rollback_backend() {
     local version="$1"
 
-    log_info "Rolling back backend to version: $version"
-
-    local compose_file="docker-compose.yml"
-    if [[ "$ENVIRONMENT" == "production" ]]; then
-        compose_file="docker-compose.prod.yml"
-    fi
+    log_info "Rolling back backend to image tag: $version"
 
     cd "$PROJECT_ROOT"
 
-    # Update the image tag
-    export BACKEND_VERSION="$version"
+    ensure_image_available "$version"
 
-    # Deploy the old version
-    docker-compose -f "$compose_file" up -d --no-deps backend
+    # The compose override resolves the backend image from this variable
+    export BACKEND_IMAGE_TAG="$version"
 
-    log_success "Backend rolled back to version: $version"
+    compose up -d --no-build --no-deps backend
+
+    log_success "Backend rolled back to: $BACKEND_IMAGE:$version"
 }
 
 verify_rollback() {
     log_info "Verifying rollback..."
 
-    local health_url
-    if [[ "$ENVIRONMENT" == "staging" ]]; then
-        health_url="https://staging-api.recoveryjourney.app/health"
-    else
-        health_url="https://api.recoveryjourney.app/health"
-    fi
-
+    local health_url="http://localhost:${BACKEND_PORT:-8000}/health"
     local max_attempts=20
     local attempt=1
 
@@ -128,11 +180,21 @@ verify_rollback() {
 
         log_info "Health check attempt $attempt/$max_attempts..."
         sleep 5
-        ((attempt++))
+        attempt=$((attempt + 1))
     done
 
     log_error "Health check failed after rollback"
     return 1
+}
+
+record_deployed_version() {
+    local version="$1"
+
+    cd "$PROJECT_ROOT"
+    if [[ -f .deployed_version ]]; then
+        cp .deployed_version .deployed_version.previous
+    fi
+    echo "$version" > .deployed_version
 }
 
 # Main rollback flow
@@ -144,6 +206,8 @@ main() {
     echo "=========================================="
     echo ""
 
+    detect_compose
+
     # If no version specified, find previous version
     if [[ -z "$TARGET_VERSION" ]]; then
         list_available_versions
@@ -152,11 +216,16 @@ main() {
 
         if [[ -z "$TARGET_VERSION" ]]; then
             log_error "Could not determine previous version"
+            log_error "Specify one explicitly: $0 $ENVIRONMENT <version>"
             exit 1
         fi
 
         log_info "No version specified, will rollback to: $TARGET_VERSION"
     fi
+
+    local current_version
+    current_version=$(cat "$PROJECT_ROOT/.deployed_version" 2>/dev/null || echo "unknown")
+    log_info "Currently deployed version: $current_version"
 
     log_warning "NOTE: This rollback only reverts the application container."
     log_warning "Database migrations are NOT automatically rolled back."
@@ -165,16 +234,9 @@ main() {
 
     confirm_action "You are about to rollback $ENVIRONMENT to version $TARGET_VERSION"
 
-    # Create a backup before rollback in case we need to undo it
-    log_info "Creating pre-rollback backup of current state..."
-    local current_version
-    current_version=$(docker images "recovery-journey-backend:$ENVIRONMENT" --format "{{.Tag}}" 2>/dev/null | head -1)
-    if [[ -n "$current_version" ]]; then
-        log_info "Current version before rollback: $current_version"
-    fi
-
     rollback_backend "$TARGET_VERSION"
     verify_rollback
+    record_deployed_version "$TARGET_VERSION"
 
     echo ""
     log_success "🔄 Rollback to $TARGET_VERSION completed successfully!"

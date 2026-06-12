@@ -59,6 +59,24 @@ Recover/recover-app/
 # Docker
 postgres_data/
 
+# Database backups & deploy state (PHI — must never be committed).
+# Deliberately NOT a global *.sql ignore: Prisma migration .sql files
+# are tracked source.
+backups/
+recovery_journey_*.sql*
+pre_restore_*.sql*
+pre_migration_*.sql*
+*.sql.enc
+*.sql.gz.enc
+.deployed_version
+.deployed_version.previous
+
+# Keys & certificates
+*.pem
+*.key
+*.keystore
+*.p12
+
 # Playwright
 Journey/test-results/
 Journey/playwright-report/
