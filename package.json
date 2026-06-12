@@ -9,7 +9,7 @@
     "Recover"
   ],
   "scripts": {
-    "prepare": "husky install",
+    "prepare": "husky install || true",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
