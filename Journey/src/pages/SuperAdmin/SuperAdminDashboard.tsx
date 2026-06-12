@@ -235,7 +235,9 @@ export default function SuperAdminDashboard({ initialTab = 'overview' }: Props) 
         {activeTab === 'administrators' && (
           <button
             onClick={() => setShowAdminModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 flex items-center gap-2"
+            disabled={isUsingMockData}
+            title={isUsingMockData ? 'Unavailable while showing demo data' : undefined}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-5 h-5" />
             Add Administrator
@@ -245,7 +247,9 @@ export default function SuperAdminDashboard({ initialTab = 'overview' }: Props) 
         {activeTab === 'clinicians' && (
           <button
             onClick={() => setShowClinicianModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 flex items-center gap-2"
+            disabled={isUsingMockData}
+            title={isUsingMockData ? 'Unavailable while showing demo data' : undefined}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-5 h-5" />
             Add Clinician
@@ -255,7 +259,9 @@ export default function SuperAdminDashboard({ initialTab = 'overview' }: Props) 
         {activeTab === 'patients' && (
           <button
             onClick={() => setShowPatientModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 flex items-center gap-2"
+            disabled={isUsingMockData}
+            title={isUsingMockData ? 'Unavailable while showing demo data' : undefined}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-5 h-5" />
             Add Patient

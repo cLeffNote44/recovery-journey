@@ -146,6 +146,11 @@ function StaffCreateModal({
             <option key={f.id} value={f.id}>{f.name}</option>
           ))}
         </select>
+        {facilities.length === 0 && (
+          <p className="mt-1 text-xs text-yellow-700 dark:text-yellow-400">
+            Create a facility first before adding {kind === 'administrator' ? 'administrators' : 'clinicians'}.
+          </p>
+        )}
       </div>
       <div>
         <label className={labelClass} htmlFor="staff-password">Temporary Password</label>
@@ -269,6 +274,11 @@ export function AddPatientModal({ isOpen, onClose, facilities }: BaseProps) {
             <option key={f.id} value={f.id}>{f.name}</option>
           ))}
         </select>
+        {facilities.length === 0 && (
+          <p className="mt-1 text-xs text-yellow-700 dark:text-yellow-400">
+            Create a facility first before adding patients.
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
