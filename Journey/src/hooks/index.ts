@@ -79,6 +79,18 @@ export {
   useFacilityDashboard,
 } from './useDashboard'
 
+export {
+  useTreatmentPlans,
+  useCreateTreatmentPlan,
+  useUpdateTreatmentPlan,
+  useAssignTreatmentPlan,
+  useArchiveTreatmentPlan,
+  toCreatePayload,
+  toBackendUnit,
+  toBackendStatus,
+  mockTreatmentPlans,
+} from './useTreatmentPlans'
+
 // Admin hooks (SuperAdmin functionality)
 export {
   useAdminStats,

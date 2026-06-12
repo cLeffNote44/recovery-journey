@@ -288,6 +288,86 @@ export const messagesAPI = {
 };
 
 // ============================================================================
+// TREATMENT PLANS API
+// ============================================================================
+
+export type PlanDurationUnit = 'DAYS' | 'WEEKS' | 'MONTHS';
+export type PlanStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+
+export interface TreatmentPhaseInput {
+  name: string;
+  description?: string;
+  duration: number;
+  durationUnit: PlanDurationUnit;
+  goals: string[];
+  activities: string[];
+}
+
+export interface CreateTreatmentPlanData {
+  name: string;
+  description?: string;
+  duration: number;
+  durationUnit: PlanDurationUnit;
+  phases: TreatmentPhaseInput[];
+  facilityId: string;
+}
+
+export interface UpdateTreatmentPlanData {
+  name?: string;
+  description?: string;
+  duration?: number;
+  durationUnit?: PlanDurationUnit;
+  phases?: TreatmentPhaseInput[];
+  status?: PlanStatus;
+}
+
+export interface AssignTreatmentPlanData {
+  patientId: string;
+  treatmentPlanId: string;
+  startDate: string; // ISO datetime
+}
+
+export interface TreatmentPlanFilters {
+  facilityId?: string;
+  status?: PlanStatus;
+}
+
+export const treatmentPlansAPI = {
+  getAll: async (filters: TreatmentPlanFilters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.facilityId) params.append('facilityId', filters.facilityId);
+    if (filters.status) params.append('status', filters.status);
+    const response = await api.get(`/treatment-plans?${params.toString()}`);
+    return response.data;
+  },
+
+  getById: async (id: string) => {
+    const response = await api.get(`/treatment-plans/${id}`);
+    return response.data;
+  },
+
+  create: async (data: CreateTreatmentPlanData) => {
+    const response = await api.post('/treatment-plans', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: UpdateTreatmentPlanData) => {
+    const response = await api.put(`/treatment-plans/${id}`, data);
+    return response.data;
+  },
+
+  assign: async (data: AssignTreatmentPlanData) => {
+    const response = await api.post('/treatment-plans/assign', data);
+    return response.data;
+  },
+
+  archive: async (id: string) => {
+    const response = await api.delete(`/treatment-plans/${id}`);
+    return response.data;
+  },
+};
+
+// ============================================================================
 // FACILITY API
 // ============================================================================
 

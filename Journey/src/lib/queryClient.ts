@@ -218,6 +218,15 @@ export const queryKeys = {
     recentMessages: () => [...queryKeys.dashboard.all, 'recent-messages'] as const,
   },
 
+  // Treatment Plans
+  treatmentPlans: {
+    all: ['treatmentPlans'] as const,
+    lists: () => [...queryKeys.treatmentPlans.all, 'list'] as const,
+    list: (filters: object) => [...queryKeys.treatmentPlans.lists(), filters] as const,
+    details: () => [...queryKeys.treatmentPlans.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.treatmentPlans.details(), id] as const,
+  },
+
   // Facilities
   facilities: {
     all: ['facilities'] as const,

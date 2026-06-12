@@ -10,103 +10,84 @@ import {
   Edit,
   Trash2,
   Copy,
+  Play,
+  AlertTriangle,
 } from 'lucide-react'
 import { SectionErrorBoundary } from '../components/ErrorBoundary'
+import { ConfirmModal } from '../components/ui/Modal'
 import {
   CreatePlanModal,
   AssignPlanModal,
   EditPlanModal,
   type TreatmentPhase,
   type TreatmentPlan,
+  type NewPlanFormData,
+  type EditPlanUpdates,
 } from '../components/TreatmentPlans'
+import {
+  useTreatmentPlans,
+  useCreateTreatmentPlan,
+  useUpdateTreatmentPlan,
+  useAssignTreatmentPlan,
+  useArchiveTreatmentPlan,
+  toCreatePayload,
+  toBackendStatus,
+  usePatients,
+} from '../hooks'
+import { useAuthStore } from '../stores/authStore'
+import { showToast } from '../components/Toast'
 
-const mockPlans: TreatmentPlan[] = [
-  {
-    id: '1',
-    name: '30-Day Intensive Recovery',
-    description: 'Comprehensive 30-day program focusing on detox, counseling, and life skills development.',
-    duration: 30,
-    durationUnit: 'days',
-    phases: [
-      { id: '1a', name: 'Detox & Stabilization', duration: 7, durationUnit: 'days', goals: ['Complete medical detox', 'Stabilize physical health'], activities: ['Medical monitoring', 'Individual assessment', 'Group orientation'] },
-      { id: '1b', name: 'Intensive Therapy', duration: 14, durationUnit: 'days', goals: ['Identify triggers', 'Develop coping strategies'], activities: ['Daily group therapy', 'Individual counseling', 'Family sessions'] },
-      { id: '1c', name: 'Transition Planning', duration: 9, durationUnit: 'days', goals: ['Create aftercare plan', 'Build support network'], activities: ['Aftercare planning', 'Community resource connection', 'Relapse prevention'] },
-    ],
-    assignedCount: 24,
-    status: 'active',
-    createdAt: '2025-01-15',
-  },
-  {
-    id: '2',
-    name: '90-Day Extended Care',
-    description: 'Extended program for patients requiring longer-term support and deeper therapeutic work.',
-    duration: 90,
-    durationUnit: 'days',
-    phases: [
-      { id: '2a', name: 'Foundation', duration: 4, durationUnit: 'weeks', goals: ['Establish routine', 'Build trust'], activities: ['Orientation', 'Assessment', 'Goal setting'] },
-      { id: '2b', name: 'Core Treatment', duration: 6, durationUnit: 'weeks', goals: ['Address root causes', 'Build skills'], activities: ['Intensive therapy', 'Skills workshops', 'Peer support'] },
-      { id: '2c', name: 'Integration', duration: 3, durationUnit: 'weeks', goals: ['Apply learnings', 'Prepare for discharge'], activities: ['Community integration', 'Employment support', 'Family reconciliation'] },
-    ],
-    assignedCount: 18,
-    status: 'active',
-    createdAt: '2025-02-01',
-  },
-  {
-    id: '3',
-    name: 'Outpatient Recovery Track',
-    description: 'Flexible outpatient program for patients transitioning from inpatient care.',
-    duration: 12,
-    durationUnit: 'weeks',
-    phases: [
-      { id: '3a', name: 'Intensive Outpatient', duration: 4, durationUnit: 'weeks', goals: ['Maintain sobriety', 'Continue therapy'], activities: ['3x weekly group', 'Weekly individual', 'Drug testing'] },
-      { id: '3b', name: 'Standard Outpatient', duration: 8, durationUnit: 'weeks', goals: ['Build independence', 'Strengthen support'], activities: ['2x weekly group', 'Bi-weekly individual', 'Support meetings'] },
-    ],
-    assignedCount: 32,
-    status: 'active',
-    createdAt: '2025-03-10',
-  },
-  {
-    id: '4',
-    name: 'Dual Diagnosis Program',
-    description: 'Specialized program for patients with co-occurring mental health disorders.',
-    duration: 60,
-    durationUnit: 'days',
-    phases: [],
-    assignedCount: 0,
-    status: 'draft',
-    createdAt: '2025-11-01',
-  },
-]
-
-const mockPatients = [
-  { id: '1', name: 'John Doe', currentPlan: '30-Day Intensive Recovery' },
-  { id: '2', name: 'Jane Smith', currentPlan: null },
-  { id: '3', name: 'Michael Brown', currentPlan: '90-Day Extended Care' },
-  { id: '4', name: 'Sarah Davis', currentPlan: null },
-  { id: '5', name: 'David Wilson', currentPlan: 'Outpatient Recovery Track' },
-]
+interface AssignablePatient {
+  id: string
+  name: string
+  currentPlan: string | null
+}
 
 export default function TreatmentPlans() {
-  const [plans, setPlans] = useState(mockPlans)
+  const facilityId = useAuthStore((s) => s.user?.facility_id)
+
+  const { data, isLoading } = useTreatmentPlans(facilityId ? { facilityId } : {})
+  const plans = data?.plans ?? []
+  // Only surface the "demo data" banner once the query has settled, so it
+  // doesn't flash during the initial load while placeholder data is showing.
+  const isUsingMockData = !isLoading && !!data && !data.isFromApi
+
+  const createPlan = useCreateTreatmentPlan()
+  const updatePlan = useUpdateTreatmentPlan()
+  const assignPlan = useAssignTreatmentPlan()
+  const archivePlan = useArchiveTreatmentPlan()
+
+  // Patients for the assign modal.
+  const { data: patientsData } = usePatients()
+  const assignablePatients: AssignablePatient[] = (patientsData?.patients ?? []).map(
+    (p: Record<string, unknown>) => ({
+      id: p.id as string,
+      name: `${(p.firstName || p.first_name || '') as string} ${(p.lastName || p.last_name || '') as string}`.trim() || 'Unnamed patient',
+      currentPlan: null,
+    })
+  )
+
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<TreatmentPlan | null>(null)
   const [editingPlan, setEditingPlan] = useState<TreatmentPlan | null>(null)
+  const [planToArchive, setPlanToArchive] = useState<TreatmentPlan | null>(null)
 
   // New plan form state
-  const [newPlan, setNewPlan] = useState({
+  const emptyForm: NewPlanFormData = {
     name: '',
     description: '',
     duration: 30,
-    durationUnit: 'days' as 'days' | 'weeks' | 'months',
-    phases: [] as TreatmentPhase[],
-  })
+    durationUnit: 'days',
+    phases: [],
+  }
+  const [newPlan, setNewPlan] = useState<NewPlanFormData>(emptyForm)
 
   const filteredPlans = plans
-    .filter(p => statusFilter === 'all' || p.status === statusFilter)
-    .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter((p) => statusFilter === 'all' || p.status === statusFilter)
+    .filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -121,17 +102,30 @@ export default function TreatmentPlans() {
     )
   }
 
-  const handleCreatePlan = () => {
-    const plan: TreatmentPlan = {
-      id: Date.now().toString(),
-      ...newPlan,
-      assignedCount: 0,
-      status: 'draft',
-      createdAt: new Date().toISOString().split('T')[0],
+  const requireFacility = (): boolean => {
+    if (!facilityId) {
+      showToast.error('No facility context found. Please sign in again.')
+      return false
     }
-    setPlans([plan, ...plans])
-    setShowCreateModal(false)
-    setNewPlan({ name: '', description: '', duration: 30, durationUnit: 'days', phases: [] })
+    return true
+  }
+
+  const handleCreatePlan = () => {
+    if (!newPlan.name.trim()) {
+      showToast.error('Give the plan a name first.')
+      return
+    }
+    if (newPlan.phases.length === 0) {
+      showToast.error('Add at least one phase before creating the plan.')
+      return
+    }
+    if (!requireFacility()) return
+    createPlan.mutate(toCreatePayload(newPlan, facilityId as string), {
+      onSuccess: () => {
+        setShowCreateModal(false)
+        setNewPlan(emptyForm)
+      },
+    })
   }
 
   const addPhase = () => {
@@ -149,24 +143,66 @@ export default function TreatmentPlans() {
   const updatePhase = (phaseId: string, updates: Partial<TreatmentPhase>) => {
     setNewPlan({
       ...newPlan,
-      phases: newPlan.phases.map(p => p.id === phaseId ? { ...p, ...updates } : p),
+      phases: newPlan.phases.map((p) => (p.id === phaseId ? { ...p, ...updates } : p)),
     })
   }
 
   const removePhase = (phaseId: string) => {
-    setNewPlan({ ...newPlan, phases: newPlan.phases.filter(p => p.id !== phaseId) })
+    setNewPlan({ ...newPlan, phases: newPlan.phases.filter((p) => p.id !== phaseId) })
   }
 
   const duplicatePlan = (plan: TreatmentPlan) => {
-    const duplicate: TreatmentPlan = {
-      ...plan,
-      id: Date.now().toString(),
-      name: `${plan.name} (Copy)`,
-      assignedCount: 0,
-      status: 'draft',
-      createdAt: new Date().toISOString().split('T')[0],
+    if (plan.phases.length === 0) {
+      showToast.error('Cannot duplicate a plan that has no phases.')
+      return
     }
-    setPlans([duplicate, ...plans])
+    if (!requireFacility()) return
+    const form: NewPlanFormData = {
+      name: `${plan.name} (Copy)`,
+      description: plan.description,
+      duration: plan.duration,
+      durationUnit: plan.durationUnit,
+      phases: plan.phases,
+    }
+    createPlan.mutate(toCreatePayload(form, facilityId as string))
+  }
+
+  const handleActivate = (plan: TreatmentPlan) => {
+    updatePlan.mutate({ id: plan.id, data: { status: 'ACTIVE' } })
+  }
+
+  const handleEditSave = (updates: EditPlanUpdates) => {
+    if (!editingPlan) return
+    updatePlan.mutate(
+      {
+        id: editingPlan.id,
+        data: {
+          name: updates.name.trim(),
+          description: updates.description.trim() || undefined,
+          status: toBackendStatus(updates.status),
+        },
+      },
+      { onSuccess: () => setEditingPlan(null) }
+    )
+  }
+
+  const handleAssign = (patientId: string) => {
+    if (!selectedPlan) return
+    assignPlan.mutate(
+      {
+        patientId,
+        treatmentPlanId: selectedPlan.id,
+        startDate: new Date().toISOString(),
+      },
+      { onSuccess: () => setShowAssignModal(false) }
+    )
+  }
+
+  const handleArchiveConfirm = () => {
+    if (!planToArchive) return
+    archivePlan.mutate(planToArchive.id, {
+      onSuccess: () => setPlanToArchive(null),
+    })
   }
 
   return (
@@ -187,6 +223,18 @@ export default function TreatmentPlans() {
         </button>
       </div>
 
+      {isUsingMockData && (
+        <div
+          className="mb-6 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/40 border border-yellow-200 dark:border-yellow-800 flex items-start gap-2"
+          role="status"
+        >
+          <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" aria-hidden="true" />
+          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+            Showing demo treatment plans — the server is unavailable, so changes won&apos;t be saved.
+          </p>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
@@ -206,7 +254,7 @@ export default function TreatmentPlans() {
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{plans.filter(p => p.status === 'active').length}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{plans.filter((p) => p.status === 'active').length}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">Active Plans</p>
             </div>
           </div>
@@ -228,7 +276,7 @@ export default function TreatmentPlans() {
               <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{plans.filter(p => p.status === 'draft').length}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{plans.filter((p) => p.status === 'draft').length}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">Drafts</p>
             </div>
           </div>
@@ -262,6 +310,16 @@ export default function TreatmentPlans() {
           <option value="archived">Archived</option>
         </select>
       </div>
+
+      {/* Empty state */}
+      {filteredPlans.length === 0 && (
+        <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+          <FileText className="w-10 h-10 text-gray-400 mx-auto mb-3" aria-hidden="true" />
+          <p className="text-gray-600 dark:text-gray-400">
+            {isLoading ? 'Loading treatment plans…' : 'No treatment plans match your filters.'}
+          </p>
+        </div>
+      )}
 
       {/* Plans Grid */}
       <div className="grid grid-cols-2 gap-6">
@@ -323,29 +381,50 @@ export default function TreatmentPlans() {
 
             <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => { setSelectedPlan(plan); setShowAssignModal(true) }}
-                  className="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-lg"
-                >
-                  Assign to Patient
-                </button>
+                {plan.status === 'draft' ? (
+                  <button
+                    onClick={() => handleActivate(plan)}
+                    disabled={updatePlan.isPending}
+                    className="px-3 py-1.5 text-sm font-medium text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/50 rounded-lg flex items-center gap-1 disabled:opacity-50"
+                  >
+                    <Play className="w-4 h-4" aria-hidden="true" />
+                    Activate
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { setSelectedPlan(plan); setShowAssignModal(true) }}
+                    disabled={plan.status !== 'active'}
+                    className="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Assign to Patient
+                  </button>
+                )}
               </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setEditingPlan(plan)}
                   className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded"
+                  aria-label={`Edit ${plan.name}`}
                 >
                   <Edit className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => duplicatePlan(plan)}
-                  className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/50 rounded"
+                  disabled={createPlan.isPending}
+                  className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/50 rounded disabled:opacity-50"
+                  aria-label={`Duplicate ${plan.name}`}
                 >
                   <Copy className="w-4 h-4" />
                 </button>
-                <button className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/50 rounded">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {plan.status !== 'archived' && (
+                  <button
+                    onClick={() => setPlanToArchive(plan)}
+                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/50 rounded"
+                    aria-label={`Archive ${plan.name}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -369,14 +448,33 @@ export default function TreatmentPlans() {
         isOpen={showAssignModal}
         onClose={() => setShowAssignModal(false)}
         selectedPlan={selectedPlan}
-        patients={mockPatients}
+        patients={assignablePatients}
+        onAssign={handleAssign}
+        isAssigning={assignPlan.isPending}
       />
 
       {/* Edit Plan Modal */}
       <EditPlanModal
         plan={editingPlan}
         onClose={() => setEditingPlan(null)}
-        onSave={() => setEditingPlan(null)}
+        onSave={handleEditSave}
+        isSaving={updatePlan.isPending}
+      />
+
+      {/* Archive confirmation */}
+      <ConfirmModal
+        isOpen={!!planToArchive}
+        onClose={() => setPlanToArchive(null)}
+        onConfirm={handleArchiveConfirm}
+        title="Archive treatment plan"
+        message={
+          planToArchive
+            ? `Archive "${planToArchive.name}"? It will no longer be assignable, but existing patient assignments are kept.`
+            : ''
+        }
+        confirmLabel="Archive"
+        variant="danger"
+        isLoading={archivePlan.isPending}
       />
     </div>
     </SectionErrorBoundary>
