@@ -115,6 +115,70 @@ async function upsertOwnGoal(patientId: string, g: z.infer<typeof goalSchema>): 
   }
 }
 
+/**
+ * Resolve a patient's assigned counselor into a WebSocket target + display
+ * name for real-time notifications. Returns null when no counselor is
+ * assigned. Looked up once per request so batch syncs don't re-query.
+ */
+async function getCounselorTarget(
+  patientId: string
+): Promise<{ key: string; patientName: string } | null> {
+  const rec = await prisma.patient.findUnique({
+    where: { id: patientId },
+    select: { assignedCounselorId: true, firstName: true, lastName: true }
+  })
+  if (!rec?.assignedCounselorId) return null
+  return { key: `staff:${rec.assignedCounselorId}`, patientName: `${rec.firstName} ${rec.lastName}` }
+}
+
+/** Broadcast a high-craving alert to the patient's counselor. */
+function emitCravingAlert(
+  target: { key: string; patientName: string },
+  patientId: string,
+  intensity: number,
+  trigger: string | undefined,
+  date: Date
+): void {
+  broadcastToUser(target.key, {
+    type: 'patient.alert',
+    data: {
+      patientId,
+      patientName: target.patientName,
+      alertType: 'high_craving',
+      severity: intensity >= 9 ? 'critical' : 'high',
+      title: `High Craving Alert (${intensity}/10)`,
+      description: trigger ?? 'Unknown trigger',
+      timestamp: date
+    }
+  })
+}
+
+/** Broadcast a concerning (low-mood/low-wellness) check-in alert. */
+function emitConcerningCheckInAlert(
+  target: { key: string; patientName: string },
+  patientId: string,
+  mood: number,
+  wellnessScore: number | null,
+  date: Date
+): void {
+  broadcastToUser(target.key, {
+    type: 'patient.alert',
+    data: {
+      patientId,
+      patientName: target.patientName,
+      alertType: 'concerning_checkin',
+      severity: mood <= 2 ? 'critical' : 'high',
+      title: `Concerning Check-in (mood ${mood}/10)`,
+      description: wellnessScore !== null ? `Wellness score ${wellnessScore}/10` : 'Low mood reported',
+      timestamp: date
+    }
+  })
+}
+
+function isConcerningCheckIn(mood: number, wellnessScore: number | null): boolean {
+  return mood <= 3 || (wellnessScore !== null && wellnessScore <= 3)
+}
+
 export async function patientSyncRoutes(fastify: FastifyInstance) {
   // All routes require patient authentication
   fastify.addHook('preHandler', requirePatient)
@@ -240,6 +304,7 @@ export async function patientSyncRoutes(fastify: FastifyInstance) {
     let syncedCount = 0
 
     const errors: string[] = []
+    const concerning: Array<{ mood: number; wellnessScore: number | null; date: Date }> = []
     for (const ci of body.checkIns) {
       try {
         const wellnessScore = calculateWellnessScore(ci)
@@ -260,8 +325,21 @@ export async function patientSyncRoutes(fastify: FastifyInstance) {
           }
         })
         syncedCount++
+        if (isConcerningCheckIn(ci.mood, wellnessScore)) {
+          concerning.push({ mood: ci.mood, wellnessScore, date: new Date(ci.date) })
+        }
       } catch (error) {
         errors.push(`check-in ${ci.date}: ${error instanceof Error ? error.message : 'unknown error'}`)
+      }
+    }
+
+    // Surface concerning check-ins to the counselor in real time (single lookup).
+    if (concerning.length > 0) {
+      const target = await getCounselorTarget(patient.id)
+      if (target) {
+        for (const c of concerning) {
+          emitConcerningCheckInAlert(target, patient.id, c.mood, c.wellnessScore, c.date)
+        }
       }
     }
 
@@ -277,6 +355,7 @@ export async function patientSyncRoutes(fastify: FastifyInstance) {
     const patient = request.patientUser!
     let syncedCount = 0
     const errors: string[] = []
+    const highCravings: Array<{ intensity: number; trigger?: string; date: Date }> = []
 
     for (const c of body.cravings) {
       try {
@@ -296,8 +375,21 @@ export async function patientSyncRoutes(fastify: FastifyInstance) {
           }
         })
         syncedCount++
+        if (c.intensity >= 7) {
+          highCravings.push({ intensity: c.intensity, trigger: c.trigger, date: new Date(c.date) })
+        }
       } catch (error) {
         errors.push(`craving ${c.date}: ${error instanceof Error ? error.message : 'unknown error'}`)
+      }
+    }
+
+    // Surface high-intensity cravings to the counselor in real time (single lookup).
+    if (highCravings.length > 0) {
+      const target = await getCounselorTarget(patient.id)
+      if (target) {
+        for (const c of highCravings) {
+          emitCravingAlert(target, patient.id, c.intensity, c.trigger, c.date)
+        }
       }
     }
 

@@ -214,6 +214,8 @@ export const queryKeys = {
     all: ['dashboard'] as const,
     facility: (facilityId: string) => [...queryKeys.dashboard.all, 'facility', facilityId] as const,
     stats: () => [...queryKeys.dashboard.all, 'stats'] as const,
+    alerts: () => [...queryKeys.dashboard.all, 'alerts'] as const,
+    recentMessages: () => [...queryKeys.dashboard.all, 'recent-messages'] as const,
   },
 
   // Facilities

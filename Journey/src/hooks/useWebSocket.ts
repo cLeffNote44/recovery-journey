@@ -6,6 +6,7 @@ import {
   NewMessagePayload,
   TypingPayload,
   PatientCheckinPayload,
+  PatientAlertPayload,
   NotificationPayload,
 } from '../services/websocket'
 import { useAuthStore } from '../stores/authStore'
@@ -78,10 +79,13 @@ export function useWebSocket() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.messages.conversations(),
       })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.dashboard.recentMessages(),
+      })
 
-      // Show notification for patient messages
-      if (payload.sender === 'patient') {
-        showToast.info(`New message from patient`)
+      // Show notification for inbound patient messages
+      if (payload.senderType === 'patient') {
+        showToast.info('New message from patient')
       }
     })
 
@@ -114,9 +118,25 @@ export function useWebSocket() {
         queryKey: queryKeys.dashboard.stats(),
       })
 
-      // Show notification for concerning check-ins
-      if (payload.cravingLevel >= 8 || payload.mood <= 2) {
-        showToast.warning('A patient reported concerning symptoms')
+      if (payload.isConcerning) {
+        showToast.warning(`${payload.patientName} reported a concerning check-in`)
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.alerts() })
+      }
+    })
+
+    // Handle patient alerts (high cravings, concerning patterns)
+    const unsubAlert = webSocket.on<PatientAlertPayload>('patient.alert', (payload) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.alerts() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats() })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.patients.dashboard(payload.patientId),
+      })
+
+      const message = `${payload.patientName}: ${payload.title}`
+      if (payload.severity === 'critical') {
+        showToast.error(message)
+      } else {
+        showToast.warning(message)
       }
     })
 
@@ -139,17 +159,20 @@ export function useWebSocket() {
       unsubMessageRead()
       unsubPatientUpdate()
       unsubCheckin()
+      unsubAlert()
       unsubNotification()
       handlersSetUp.current = false
     }
   }, [queryClient])
 
-  // Action: Send a message
+  // Action: Send a message. NOTE: outbound messages are sent via the REST
+  // API (POST /messages), which the server then broadcasts — this WS path is
+  // kept only for symmetry and typing-style ephemeral sends.
   const sendMessage = useCallback((patientId: string, content: string) => {
     webSocket.send<Partial<NewMessagePayload>>('message.new', {
       patientId,
       content,
-      sender: 'clinician',
+      senderType: 'staff',
     })
   }, [])
 

@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
 import { buildApp, mockPrisma, makePatient, signTestToken } from '../test/setup.js'
+import { broadcastToUser } from '../websocket/handler.js'
 import type { FastifyInstance } from 'fastify'
+
+const mockBroadcast = broadcastToUser as unknown as ReturnType<typeof vi.fn>
 
 describe('Patient Sync Routes', () => {
   let app: FastifyInstance
@@ -203,6 +206,34 @@ describe('Patient Sync Routes', () => {
 
       expect(res.statusCode).toBe(200)
       expect(res.json().syncedCount).toBe(0)
+    })
+
+    it('alerts the counselor of a concerning (low-mood) check-in in a batch', async () => {
+      mockPrisma.checkIn.create.mockResolvedValue({})
+      mockPrisma.patient.findUnique.mockResolvedValue(
+        makePatient({ assignedCounselorId: 'staff-1', firstName: 'John', lastName: 'Smith' })
+      )
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/sync/check-ins',
+        headers: authHeaders(),
+        payload: {
+          checkIns: [
+            { date: '2025-01-15T10:00:00.000Z', mood: 8 }, // fine
+            { date: '2025-01-16T10:00:00.000Z', mood: 2 }, // concerning
+          ],
+        },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(mockBroadcast).toHaveBeenCalledWith(
+        'staff:staff-1',
+        expect.objectContaining({
+          type: 'patient.alert',
+          data: expect.objectContaining({ alertType: 'concerning_checkin', patientName: 'John Smith' }),
+        })
+      )
     })
   })
 
