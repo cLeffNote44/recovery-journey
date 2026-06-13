@@ -1,11 +1,17 @@
 import { CheckIn, Badge, SleepEntry, ExerciseEntry, NutritionEntry, Craving, Relapse, CleanPeriod, AppData, TWELVE_STEPS } from '@/types/app';
 
 export function calculateDaysSober(sobrietyDate: string): number {
+  // Count whole calendar days, not elapsed milliseconds: a sobriety counter
+  // ticks at local midnight, and the day you set is day 0. Normalizing both
+  // ends to local midnight (then rounding to absorb DST) makes this exact and
+  // deterministic — the old Math.ceil on raw elapsed time rounded any non-zero
+  // gap up to 1, so "today" flaked to 1 whenever the two clock reads differed.
   const start = new Date(sobrietyDate);
   const today = new Date();
-  const diffTime = Math.abs(today.getTime() - start.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
+  start.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.max(0, diffDays);
 }
 
 export function calculateStreak(checkIns: CheckIn[]): number {
