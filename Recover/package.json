@@ -111,10 +111,5 @@
     "unimported": "^1.31.1",
     "vite": "^7.1.0",
     "vitest": "^4.0.4"
-  },
-  "pnpm": {
-    "overrides": {
-      "tailwindcss>nanoid": "3.3.7"
-    }
   }
 }
