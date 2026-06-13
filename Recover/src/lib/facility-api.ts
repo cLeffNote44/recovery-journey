@@ -412,16 +412,18 @@ export const fetchMessages = async (): Promise<{
  */
 export const sendMessage = async (
   content: string,
-  _messageType: 'general' | 'check_in' | 'alert' = 'general',
-  _priority: 'low' | 'normal' | 'high' | 'urgent' = 'normal'
+  messageType: 'general' | 'check_in' | 'alert' = 'general',
+  priority: 'low' | 'normal' | 'high' | 'urgent' = 'normal'
 ): Promise<{ success: boolean; message?: FacilityMessage; error?: string }> => {
   const store = useFacilityStore.getState();
 
   try {
-    // The patient/send endpoint automatically sends to assigned counselor
+    // The patient/send endpoint automatically sends to assigned counselor.
+    // The backend treats an URGENT priority as a crisis escalation and raises
+    // it as a patient.alert on the clinician side.
     const response = await authFetch<{ message: any }>('/messages/patient/send', {
       method: 'POST',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, priority: priority.toUpperCase() }),
     });
 
     const message: FacilityMessage = {
@@ -430,10 +432,10 @@ export const sendMessage = async (
       senderType: 'patient',
       senderName: 'You',
       content: response.message.content,
-      messageType: 'general',
-      priority: 'normal',
+      messageType,
+      priority,
       isRead: true,
-      createdAt: response.message.createdAt,
+      createdAt: response.message.sentAt ?? response.message.createdAt,
     };
 
     store.addMessage(message);
@@ -445,6 +447,21 @@ export const sendMessage = async (
       error: error instanceof Error ? error.message : 'Failed to send message',
     };
   }
+};
+
+/**
+ * Send an urgent crisis escalation ("I need help now") to the patient's
+ * counselor. Distinct from a normal message: the backend raises it as a
+ * critical patient.alert in the clinician dashboard's alert triage, not just
+ * the chat thread. The phone-based crisis lines (988, etc.) remain the
+ * offline-safe primary path; this notifies the patient's own care team.
+ */
+export const sendCounselorAlert = async (
+  note?: string
+): Promise<{ success: boolean; message?: FacilityMessage; error?: string }> => {
+  const trimmed = note?.trim();
+  const content = trimmed ? `I need help now. ${trimmed}` : 'I need help now.';
+  return sendMessage(content, 'alert', 'urgent');
 };
 
 /**

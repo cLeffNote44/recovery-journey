@@ -121,6 +121,8 @@ import jwt from '@fastify/jwt'
 import { authRoutes } from '../routes/auth.js'
 import { patientSyncRoutes } from '../routes/patient-sync.js'
 import { adminRoutes } from '../routes/admin.js'
+import { messageRoutes } from '../routes/messages.js'
+import { dashboardRoutes } from '../routes/dashboard.js'
 import { errorHandler } from '../lib/error-handler.js'
 
 export const TEST_JWT_SECRET = 'test-secret-key-that-is-long-enough-for-testing'
@@ -137,6 +139,8 @@ export async function buildApp() {
   app.register(authRoutes, { prefix: '/api/v1/auth' })
   app.register(patientSyncRoutes, { prefix: '/api/v1/sync' })
   app.register(adminRoutes, { prefix: '/api/v1/admin' })
+  app.register(messageRoutes, { prefix: '/api/v1/messages' })
+  app.register(dashboardRoutes, { prefix: '/api/v1/dashboard' })
 
   await app.ready()
   return app

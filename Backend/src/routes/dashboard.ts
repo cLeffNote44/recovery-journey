@@ -215,8 +215,38 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
       take: 10
     })
 
+    // Get patient-initiated SOS (urgent) messages from last 48 hours.
+    // Unread only: once the counselor opens the conversation the messages are
+    // marked read, so an acknowledged SOS drops off the triage panel.
+    const sosMessages = await prisma.message.findMany({
+      where: {
+        patient: facilityWhere,
+        senderType: 'PATIENT',
+        priority: 'URGENT',
+        readAt: null,
+        sentAt: { gte: new Date(Date.now() - 48 * 60 * 60 * 1000) }
+      },
+      include: {
+        patient: {
+          select: { id: true, firstName: true, lastName: true }
+        }
+      },
+      orderBy: { sentAt: 'desc' },
+      take: 10
+    })
+
     // Combine and format alerts
     const alerts = [
+      ...sosMessages.map(m => ({
+        id: `sos-${m.id}`,
+        type: 'sos' as const,
+        severity: 'critical' as const,
+        patientId: m.patient.id,
+        patientName: `${m.patient.firstName} ${m.patient.lastName}`,
+        title: 'SOS — Patient requested urgent help',
+        description: m.content.slice(0, 200),
+        timestamp: m.sentAt
+      })),
       ...highCravings.map(c => ({
         id: `craving-${c.id}`,
         type: 'high_craving' as const,

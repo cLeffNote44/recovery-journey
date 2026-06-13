@@ -2,7 +2,7 @@ import { useState, lazy, Suspense } from 'react';
 import { useAppData } from '@/hooks/useAppData';
 import { BottomNav } from '@/components/app/BottomNav';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Search } from 'lucide-react';
+import { AlertCircle, Search, Settings as SettingsIcon } from 'lucide-react';
 import { EmergencySupportModal } from '@/components/app/EmergencySupportModal';
 import { SearchModal } from '@/components/app/SearchModal';
 import { NotificationCenter } from '@/components/app/NotificationCenter';
@@ -19,6 +19,7 @@ const PreventionScreen = lazy(() => import('@/components/app/screens/PreventionS
 const WellnessScreen = lazy(() => import('@/components/app/screens/WellnessScreen').then(m => ({ default: m.WellnessScreen })));
 const SettingsScreen = lazy(() => import('@/components/app/screens/SettingsScreen').then(m => ({ default: m.SettingsScreen })));
 const FacilityScreen = lazy(() => import('@/components/app/screens/FacilityScreen').then(m => ({ default: m.FacilityScreen })));
+const MeetingFinderScreen = lazy(() => import('@/components/app/screens/MeetingFinderScreen').then(m => ({ default: m.MeetingFinderScreen })));
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState('home');
@@ -58,6 +59,15 @@ function AppContent() {
           <Search className="w-4 h-4" aria-hidden="true" />
         </Button>
         <Button
+          onClick={() => setActiveTab('settings')}
+          variant="outline"
+          size="sm"
+          aria-label="Open settings"
+          className="bg-white/90 backdrop-blur-sm shadow-lg"
+        >
+          <SettingsIcon className="w-4 h-4" aria-hidden="true" />
+        </Button>
+        <Button
           onClick={() => setShowEmergency(true)}
           className="bg-red-500 hover:bg-red-600 text-white shadow-lg"
           size="sm"
@@ -87,7 +97,10 @@ function AppContent() {
           }>
             {activeTab === 'home' && (
               <FeatureErrorBoundary featureName="Home Dashboard">
-                <HomeScreen />
+                <HomeScreen
+                  onNavigate={setActiveTab}
+                  onEmergency={() => setShowEmergency(true)}
+                />
               </FeatureErrorBoundary>
             )}
             {activeTab === 'calendar' && (
@@ -123,6 +136,11 @@ function AppContent() {
             {activeTab === 'facility' && (
               <FeatureErrorBoundary featureName="Facility">
                 <FacilityScreen />
+              </FeatureErrorBoundary>
+            )}
+            {activeTab === 'meetings' && (
+              <FeatureErrorBoundary featureName="Meeting Finder">
+                <MeetingFinderScreen onNavigate={setActiveTab} />
               </FeatureErrorBoundary>
             )}
             {activeTab === 'settings' && (

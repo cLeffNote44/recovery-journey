@@ -5,6 +5,41 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-06-13
+
+### Added
+- Patient crisis escalation (Recover): an "Alert my counselor — I need help
+  now" action in the emergency support modal sends an urgent message that the
+  backend raises as a critical `patient.alert` on the clinician side (toast +
+  dashboard alert triage) and that persists in the alerts panel until the
+  counselor acknowledges it — completing the patient→counselor half of the
+  real-time care loop. The phone-based crisis lines (988, etc.) remain the
+  offline-safe primary path; failures are surfaced honestly rather than shown as
+  success.
+- Medication reminders (Recover): daily per-dose reminders and refill reminders
+  are scheduled from the medication list via Capacitor local notifications, kept
+  in sync as medications change and gated on the master notifications toggle.
+  HIPAA / 42 CFR Part 2: the medication name never appears in the lock-screen
+  notification body — only a generic prompt, with specifics behind the app lock.
+- Meeting finder (Recover): discover meetings via the official locators (AA, NA,
+  SMART, SAMHSA) and a maps "near me" search built from a typed ZIP/city, plus
+  always-available online/24-7 meetings. Works with no backend, API key, or
+  native geolocation dependency (links open in the device browser).
+
+### Changed
+- Recover navigation consolidated from 7 horizontally-scrolling bottom tabs to
+  five primary daily destinations (Home, Journal, Prevention, Wellness,
+  Facility). Settings moved into a header button; Calendar and the new Meeting
+  Finder are reached from Home quick-access cards (both remain routable via
+  Search and Notifications). An always-visible, supportive crisis-support card
+  was added to the Home dashboard.
+
+### Fixed
+- WebSocket `message.new` events now carry `senderType` in the lowercase form
+  the clinician client's contract expects; the backend had been broadcasting the
+  raw uppercase Prisma enum, silently suppressing the "new message from patient"
+  toast on the clinician side.
+
 ## [1.10.0] - 2026-06-12
 
 ### Security
