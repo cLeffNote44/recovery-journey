@@ -19,6 +19,7 @@ const PreventionScreen = lazy(() => import('@/components/app/screens/PreventionS
 const WellnessScreen = lazy(() => import('@/components/app/screens/WellnessScreen').then(m => ({ default: m.WellnessScreen })));
 const SettingsScreen = lazy(() => import('@/components/app/screens/SettingsScreen').then(m => ({ default: m.SettingsScreen })));
 const FacilityScreen = lazy(() => import('@/components/app/screens/FacilityScreen').then(m => ({ default: m.FacilityScreen })));
+const MeetingFinderScreen = lazy(() => import('@/components/app/screens/MeetingFinderScreen').then(m => ({ default: m.MeetingFinderScreen })));
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState('home');
@@ -135,6 +136,11 @@ function AppContent() {
             {activeTab === 'facility' && (
               <FeatureErrorBoundary featureName="Facility">
                 <FacilityScreen />
+              </FeatureErrorBoundary>
+            )}
+            {activeTab === 'meetings' && (
+              <FeatureErrorBoundary featureName="Meeting Finder">
+                <MeetingFinderScreen onNavigate={setActiveTab} />
               </FeatureErrorBoundary>
             )}
             {activeTab === 'settings' && (

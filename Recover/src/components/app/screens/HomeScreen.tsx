@@ -12,7 +12,7 @@ import { HomeScreenSkeleton } from '@/components/LoadingSkeletons';
 import { BadgesScreen } from './BadgesScreen';
 import {
   Calendar, CheckCircle, Heart, Flame,
-  Shield, DollarSign, Trophy, Moon, Sun, RefreshCw, X, LifeBuoy, ChevronRight
+  Shield, DollarSign, Trophy, Moon, Sun, RefreshCw, X, LifeBuoy, ChevronRight, MapPin
 } from 'lucide-react';
 import { calculateDaysSober, calculateStreak, getMilestone, getMoodTrend, calculateTotalSavings, calculateTotalSoberDaysThisYear, calculateTotalRecoveryDays } from '@/lib/utils';
 import { MOOD_EMOJIS } from '@/lib/constants';
@@ -228,19 +228,32 @@ export function HomeScreen({ onNavigate, onEmergency }: HomeScreenProps = {}) {
         </Card>
       )}
 
-      {/* Calendar quick-access (folded in from the former Calendar tab) */}
+      {/* Quick access to destinations off the tab bar */}
       {onNavigate && (
-        <button
-          onClick={() => onNavigate('calendar')}
-          className="w-full flex items-center justify-between rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-accent"
-          aria-label="Open calendar"
-        >
-          <div className="flex items-center gap-3">
-            <Calendar className="w-5 h-5 text-primary" aria-hidden="true" />
-            <span className="text-sm font-medium">Calendar &amp; upcoming events</span>
-          </div>
-          <ChevronRight className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-        </button>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <button
+            onClick={() => onNavigate('calendar')}
+            className="flex items-center justify-between rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-accent"
+            aria-label="Open calendar"
+          >
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-primary" aria-hidden="true" />
+              <span className="text-sm font-medium">Calendar &amp; events</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+          </button>
+          <button
+            onClick={() => onNavigate('meetings')}
+            className="flex items-center justify-between rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-accent"
+            aria-label="Find a meeting"
+          >
+            <div className="flex items-center gap-3">
+              <MapPin className="w-5 h-5 text-primary" aria-hidden="true" />
+              <span className="text-sm font-medium">Find a meeting</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+          </button>
+        </div>
       )}
 
       {/* Sobriety Progress Card - Dual Counter */}
