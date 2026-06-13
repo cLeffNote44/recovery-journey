@@ -299,7 +299,7 @@ export async function messageRoutes(fastify: FastifyInstance) {
     // Get patient's assigned counselor
     const patientRecord = await prisma.patient.findUnique({
       where: { id: patient.id },
-      select: { assignedCounselorId: true }
+      select: { assignedCounselorId: true, firstName: true, lastName: true }
     })
 
     if (!patientRecord?.assignedCounselorId) {
@@ -323,6 +323,25 @@ export async function messageRoutes(fastify: FastifyInstance) {
       type: 'message.new',
       data: message
     })
+
+    // An URGENT message is a patient-initiated crisis escalation ("I need help
+    // now"). Also fire the patient.alert channel so it surfaces in the
+    // clinician's alert triage (toast + dashboard alerts panel), not just the
+    // conversation thread.
+    if ((body.priority ?? 'NORMAL') === 'URGENT') {
+      broadcastToUser(`staff:${patientRecord.assignedCounselorId}`, {
+        type: 'patient.alert',
+        data: {
+          patientId: patient.id,
+          patientName: `${patientRecord.firstName} ${patientRecord.lastName}`,
+          alertType: 'sos',
+          severity: 'critical',
+          title: 'SOS — Patient requested urgent help',
+          description: body.content.slice(0, 200),
+          timestamp: message.sentAt
+        }
+      })
+    }
 
     return {
       success: true,

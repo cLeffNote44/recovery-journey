@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Phone, MessageSquare, AlertCircle, Heart, Users, Globe, X, Check, Clock, ChevronRight } from 'lucide-react';
+import { Phone, MessageSquare, AlertCircle, Heart, Users, Globe, X, Check, Clock, ChevronRight, BellRing } from 'lucide-react';
+import { useFacilityStore } from '@/stores/useFacilityStore';
+import { sendCounselorAlert } from '@/lib/facility-api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +52,28 @@ export function EmergencySupportModal({
   const [notes, setNotes] = useState('');
   const exerciseIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const isFacilityConnected = useFacilityStore((s) => s.isConnected);
+  const counselorName = useFacilityStore((s) => s.connection?.counselorName);
+  const [alertingCounselor, setAlertingCounselor] = useState(false);
+  const [counselorAlerted, setCounselorAlerted] = useState(false);
+
+  const handleAlertCounselor = async () => {
+    setAlertingCounselor(true);
+    try {
+      const res = await sendCounselorAlert();
+      if (res.success) {
+        setCounselorAlerted(true);
+        toast.success('Your care team has been alerted. Keep using these tools while you wait.');
+      } else {
+        toast.error(res.error || 'Could not reach your counselor — please use a crisis line above.');
+      }
+    } catch {
+      toast.error('Could not reach your counselor — please use a crisis line above.');
+    } finally {
+      setAlertingCounselor(false);
+    }
+  };
+
   // Cleanup interval on unmount or exercise change
   useEffect(() => {
     return () => {
@@ -69,6 +93,7 @@ export function EmergencySupportModal({
       // Log emergency alert when modal opens
       const alert = createEmergencyAlert(riskLevel, 'User activated emergency support');
       onAlertLogged?.(alert);
+      setCounselorAlerted(false);
     }
   }, [isOpen, riskLevel, onAlertLogged]);
 
@@ -219,6 +244,40 @@ export function EmergencySupportModal({
                   Your life matters. There are people who want to help you.
                 </p>
               </div>
+
+              {/* Alert my care team — patient-initiated escalation to counselor */}
+              {isFacilityConnected && (
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <BellRing className="h-5 w-5" />
+                    Reach Your Care Team
+                  </h3>
+                  {counselorAlerted ? (
+                    <Card className="p-4 border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-950/20">
+                      <div className="flex items-center gap-3 text-green-800 dark:text-green-200">
+                        <Check className="h-5 w-5 flex-shrink-0" />
+                        <p className="text-sm font-medium">
+                          {counselorName ? `${counselorName} has been alerted.` : 'Your counselor has been alerted.'}{' '}
+                          They&apos;ll reach out. Keep using these tools while you wait.
+                        </p>
+                      </div>
+                    </Card>
+                  ) : (
+                    <Button
+                      variant="destructive"
+                      className="w-full justify-center h-auto py-3"
+                      onClick={handleAlertCounselor}
+                      disabled={alertingCounselor}
+                    >
+                      <BellRing className="h-5 w-5 mr-2" />
+                      {alertingCounselor ? 'Alerting…' : 'Alert my counselor — I need help now'}
+                    </Button>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Notifies your assigned counselor right away. For an immediate emergency, use a crisis line below.
+                  </p>
+                </div>
+              )}
 
               {/* Quick Dial */}
               <div>
