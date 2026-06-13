@@ -270,6 +270,124 @@ export async function cancelMeetingReminder(meetingId: number): Promise<void> {
   }
 }
 
+// Notification ID bands. Medication reminders are scheduled in bulk and
+// cancelled by their `extra.type`, so the exact ids only need to be collision-
+// free with the other notification kinds (daily=1, streak=2, meetings=100+).
+const MED_REMINDER_BASE = 500000;
+const MED_REFILL_BASE = 600000;
+const MED_REMINDER_MAX = 90; // safety cap on total scheduled dose reminders
+
+/** Minimal shape needed to schedule reminders from a Medication. */
+export interface MedicationReminderInput {
+  id: number;
+  isActive?: boolean;
+  times?: string[];
+  refillDate?: string;
+  refillReminder?: boolean;
+}
+
+/**
+ * Cancel all medication dose + refill reminders (identified by extra.type).
+ */
+export async function cancelMedicationReminders(): Promise<void> {
+  if (!isNative()) return;
+
+  try {
+    const pending = await LocalNotifications.getPending();
+    const ours = pending.notifications.filter(
+      (n) => n.extra?.type === 'medication' || n.extra?.type === 'medication-refill'
+    );
+    if (ours.length > 0) {
+      await LocalNotifications.cancel({ notifications: ours.map((n) => ({ id: n.id })) });
+    }
+  } catch (error) {
+    console.error('Error canceling medication reminders:', error);
+  }
+}
+
+/**
+ * (Re)schedule daily medication-time reminders and refill reminders from the
+ * patient's medication list. Idempotent — cancels existing medication
+ * reminders first.
+ *
+ * HIPAA / 42 CFR Part 2: the medication name never appears in the notification
+ * body (which shows on the lock screen). The body is a generic prompt; the
+ * specifics live in `extra`, surfaced only inside the authenticated app.
+ */
+export async function scheduleMedicationReminders(
+  medications: MedicationReminderInput[]
+): Promise<void> {
+  if (!isNative()) return;
+
+  try {
+    const hasPermission = await checkNotificationPermission();
+    if (!hasPermission) return;
+
+    // Replace any previously-scheduled medication reminders.
+    await cancelMedicationReminders();
+
+    const now = new Date();
+    const toSchedule: ScheduleOptions['notifications'] = [];
+
+    // Daily dose reminders — one repeating notification per active med per time.
+    let slot = 0;
+    for (const med of medications) {
+      if (med.isActive === false) continue;
+      for (const time of med.times ?? []) {
+        if (slot >= MED_REMINDER_MAX) break;
+        const [hour, minute] = time.split(':').map(Number);
+        if (Number.isNaN(hour) || Number.isNaN(minute)) continue;
+
+        const at = new Date();
+        at.setHours(hour, minute, 0, 0);
+        if (at < now) at.setDate(at.getDate() + 1);
+
+        toSchedule.push({
+          id: MED_REMINDER_BASE + slot,
+          title: 'Reminder',
+          body: 'You have a reminder. Open the app for details.',
+          schedule: { at, every: 'day' },
+          sound: undefined,
+          attachments: undefined,
+          actionTypeId: '',
+          extra: { type: 'medication', medicationId: med.id, time },
+        });
+        slot++;
+      }
+    }
+
+    // Refill reminders — one-off, 3 days before the refill date at 9am.
+    let refillSlot = 0;
+    for (const med of medications) {
+      if (med.isActive === false || !med.refillReminder || !med.refillDate) continue;
+      const refill = new Date(med.refillDate);
+      if (Number.isNaN(refill.getTime())) continue;
+
+      const at = new Date(refill.getTime() - 3 * 24 * 60 * 60 * 1000);
+      at.setHours(9, 0, 0, 0);
+      if (at < now) continue; // refill window already passed
+
+      toSchedule.push({
+        id: MED_REFILL_BASE + refillSlot,
+        title: 'Reminder',
+        body: 'You have a reminder. Open the app for details.',
+        schedule: { at },
+        sound: undefined,
+        attachments: undefined,
+        actionTypeId: '',
+        extra: { type: 'medication-refill', medicationId: med.id },
+      });
+      refillSlot++;
+    }
+
+    if (toSchedule.length > 0) {
+      await LocalNotifications.schedule({ notifications: toSchedule });
+    }
+  } catch (error) {
+    console.error('Error scheduling medication reminders:', error);
+  }
+}
+
 /**
  * Cancel all scheduled notifications
  */

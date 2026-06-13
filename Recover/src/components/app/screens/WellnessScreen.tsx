@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppData } from '@/hooks/useAppData';
+import { scheduleMedicationReminders, cancelMedicationReminders } from '@/lib/notifications';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,10 +33,23 @@ export function WellnessScreen() {
     setExerciseEntries,
     nutritionEntries,
     setNutritionEntries,
+    notificationSettings,
     loading
   } = useAppData();
 
   const [activeTab, setActiveTab] = useState('sleep');
+
+  // Keep medication dose/refill reminders in sync with the medication list.
+  // Gated on the master notifications toggle; cancels them when disabled.
+  // No-op off native (the scheduling helpers guard on Capacitor platform).
+  const notificationsEnabled = notificationSettings.enabled;
+  useEffect(() => {
+    if (notificationsEnabled) {
+      void scheduleMedicationReminders(medications);
+    } else {
+      void cancelMedicationReminders();
+    }
+  }, [medications, notificationsEnabled]);
 
   // Sleep state
   const [showAddSleep, setShowAddSleep] = useState(false);
