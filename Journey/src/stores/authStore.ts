@@ -42,6 +42,13 @@ const calculateExpiry = (expiresIn?: number): number => {
 // and excludes sensitive token data from persistence
 const secureStorage = createJSONStorage(() => sessionStorage)
 
+// E2E escape hatch: Playwright seeds a persisted user (no tokens) and needs
+// authenticated pages to render against mock data. Only honored under the
+// Vite dev server with VITE_E2E=true (set by playwright.config.ts), so this
+// branch is dead code in production builds where the forced re-login below
+// remains the HIPAA-required behavior.
+const isE2E = import.meta.env.DEV && import.meta.env.VITE_E2E === 'true'
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -138,6 +145,12 @@ export const useAuthStore = create<AuthState>()(
       // User must re-login after browser close
       onRehydrateStorage: () => (state) => {
         if (state) {
+          // E2E only: trust the seeded user so pages render without a login
+          // round-trip. Tokens stay null, so all API calls fall back to mock.
+          if (isE2E && state.user) {
+            state.isAuthenticated = true
+            return
+          }
           // After rehydration, tokens are null (not persisted)
           // So user must re-authenticate
           state.isAuthenticated = false

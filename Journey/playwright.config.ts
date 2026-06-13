@@ -12,6 +12,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
+  /* Abort early on systemic failure instead of burning timeouts on every test */
+  maxFailures: process.env.CI ? 10 : 0,
   /* Opt out of parallel tests on CI */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use */
@@ -50,5 +52,10 @@ export default defineConfig({
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    env: {
+      // Lets the auth store trust the seeded session-storage user so
+      // authenticated pages render without a live backend (see authStore.ts).
+      VITE_E2E: 'true',
+    },
   },
 })
