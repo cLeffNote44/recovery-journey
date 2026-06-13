@@ -1,5 +1,5 @@
 import { memo, useRef, useEffect } from 'react';
-import { Home, Calendar, BookOpen, Shield, Settings, Heart, Building2 } from "lucide-react";
+import { Home, BookOpen, Shield, Heart, Building2 } from "lucide-react";
 import { useFacilityStore } from '@/stores/useFacilityStore';
 
 interface BottomNavProps {
@@ -7,14 +7,14 @@ interface BottomNavProps {
   onTabChange: (tab: string) => void;
 }
 
+// Five primary daily destinations. Settings lives in the header; Calendar and
+// the other secondary screens are reached from Home / Search / Notifications.
 const tabs = [
   { id: 'home', icon: Home, label: 'Home' },
-  { id: 'calendar', icon: Calendar, label: 'Calendar' },
   { id: 'journal', icon: BookOpen, label: 'Journal' },
   { id: 'prevention', icon: Shield, label: 'Prevention' },
   { id: 'wellness', icon: Heart, label: 'Wellness' },
-  { id: 'facility', icon: Building2, label: 'Facility' },
-  { id: 'settings', icon: Settings, label: 'Settings' }
+  { id: 'facility', icon: Building2, label: 'Facility' }
 ];
 
 export const BottomNav = memo(function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
@@ -53,7 +53,7 @@ export const BottomNav = memo(function BottomNav({ activeTab, onTabChange }: Bot
         }}
       >
         <div
-          className="flex items-center h-16 min-w-max px-2"
+          className="flex items-center h-16 w-full px-2"
           role="tablist"
         >
           {tabs.map(tab => {
@@ -70,7 +70,7 @@ export const BottomNav = memo(function BottomNav({ activeTab, onTabChange }: Bot
                 aria-selected={isActive}
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={`${tab.label} tab${isActive ? ' - currently selected' : ''}${showBadge ? `, ${unreadMessageCount} unread messages` : ''}`}
-                className={`flex flex-col items-center justify-center px-4 h-full transition-colors relative shrink-0 ${
+                className={`flex flex-1 flex-col items-center justify-center px-2 h-full transition-colors relative ${
                   isActive
                     ? 'text-primary'
                     : 'text-muted-foreground hover:text-foreground'

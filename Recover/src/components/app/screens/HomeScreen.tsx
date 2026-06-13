@@ -12,7 +12,7 @@ import { HomeScreenSkeleton } from '@/components/LoadingSkeletons';
 import { BadgesScreen } from './BadgesScreen';
 import {
   Calendar, CheckCircle, Heart, Flame,
-  Shield, DollarSign, Trophy, Moon, Sun, RefreshCw, X
+  Shield, DollarSign, Trophy, Moon, Sun, RefreshCw, X, LifeBuoy, ChevronRight
 } from 'lucide-react';
 import { calculateDaysSober, calculateStreak, getMilestone, getMoodTrend, calculateTotalSavings, calculateTotalSoberDaysThisYear, calculateTotalRecoveryDays } from '@/lib/utils';
 import { MOOD_EMOJIS } from '@/lib/constants';
@@ -25,7 +25,14 @@ import type { HALTCheck as HALTCheckType } from '@/types/app';
 import { toast } from 'sonner';
 import { getQuoteOfTheDay } from '@/lib/quotes';
 
-export function HomeScreen() {
+interface HomeScreenProps {
+  /** Navigate to another tab/screen (e.g. the Calendar, now off the tab bar). */
+  onNavigate?: (tab: string) => void;
+  /** Open the emergency / crisis support modal. */
+  onEmergency?: () => void;
+}
+
+export function HomeScreen({ onNavigate, onEmergency }: HomeScreenProps = {}) {
   // Zustand stores
   const sobrietyDate = useRecoveryStore((state) => state.sobrietyDate);
   const setSobrietyDate = useRecoveryStore((state) => state.setSobrietyDate);
@@ -193,6 +200,48 @@ export function HomeScreen() {
           {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </Button>
       </div>
+
+      {/* Always-available crisis support — one tap to grounding tools,
+          crisis lines, and the patient's care team. */}
+      {onEmergency && (
+        <Card className="border-2 border-red-500/30 bg-red-500/5">
+          <CardContent className="p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-red-500/10 p-2 shrink-0">
+                <LifeBuoy className="w-5 h-5 text-red-600 dark:text-red-400" aria-hidden="true" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">Need support right now?</p>
+                <p className="text-xs text-muted-foreground">
+                  Grounding tools, crisis lines, and your care team.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => onEmergency()}
+              className="bg-red-500 hover:bg-red-600 text-white shrink-0"
+              size="sm"
+            >
+              Get help
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Calendar quick-access (folded in from the former Calendar tab) */}
+      {onNavigate && (
+        <button
+          onClick={() => onNavigate('calendar')}
+          className="w-full flex items-center justify-between rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-accent"
+          aria-label="Open calendar"
+        >
+          <div className="flex items-center gap-3">
+            <Calendar className="w-5 h-5 text-primary" aria-hidden="true" />
+            <span className="text-sm font-medium">Calendar &amp; upcoming events</span>
+          </div>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+        </button>
+      )}
 
       {/* Sobriety Progress Card - Dual Counter */}
       <Card className="bg-gradient-to-br from-slate-700 via-slate-800 to-gray-900 text-white border-0 overflow-hidden relative">

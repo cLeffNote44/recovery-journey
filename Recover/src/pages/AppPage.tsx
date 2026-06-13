@@ -2,7 +2,7 @@ import { useState, lazy, Suspense } from 'react';
 import { useAppData } from '@/hooks/useAppData';
 import { BottomNav } from '@/components/app/BottomNav';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Search } from 'lucide-react';
+import { AlertCircle, Search, Settings as SettingsIcon } from 'lucide-react';
 import { EmergencySupportModal } from '@/components/app/EmergencySupportModal';
 import { SearchModal } from '@/components/app/SearchModal';
 import { NotificationCenter } from '@/components/app/NotificationCenter';
@@ -58,6 +58,15 @@ function AppContent() {
           <Search className="w-4 h-4" aria-hidden="true" />
         </Button>
         <Button
+          onClick={() => setActiveTab('settings')}
+          variant="outline"
+          size="sm"
+          aria-label="Open settings"
+          className="bg-white/90 backdrop-blur-sm shadow-lg"
+        >
+          <SettingsIcon className="w-4 h-4" aria-hidden="true" />
+        </Button>
+        <Button
           onClick={() => setShowEmergency(true)}
           className="bg-red-500 hover:bg-red-600 text-white shadow-lg"
           size="sm"
@@ -87,7 +96,10 @@ function AppContent() {
           }>
             {activeTab === 'home' && (
               <FeatureErrorBoundary featureName="Home Dashboard">
-                <HomeScreen />
+                <HomeScreen
+                  onNavigate={setActiveTab}
+                  onEmergency={() => setShowEmergency(true)}
+                />
               </FeatureErrorBoundary>
             )}
             {activeTab === 'calendar' && (
