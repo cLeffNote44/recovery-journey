@@ -435,7 +435,7 @@ export const sendMessage = async (
       messageType,
       priority,
       isRead: true,
-      createdAt: response.message.createdAt,
+      createdAt: response.message.sentAt ?? response.message.createdAt,
     };
 
     store.addMessage(message);

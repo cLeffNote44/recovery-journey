@@ -185,6 +185,7 @@ export async function messageRoutes(fastify: FastifyInstance) {
       type: 'message.new',
       data: {
         ...message,
+        senderType: message.senderType.toLowerCase(), // client contract is lowercase
         senderName: `${user.id}` // Will be resolved on client
       }
     })
@@ -318,10 +319,12 @@ export async function messageRoutes(fastify: FastifyInstance) {
       }
     })
 
-    // Broadcast to counselor via WebSocket
+    // Broadcast to counselor via WebSocket. Normalize senderType to the
+    // lowercase the client contract (NewMessagePayload) expects, otherwise the
+    // clinician's "new message" toast never fires.
     broadcastToUser(`staff:${patientRecord.assignedCounselorId}`, {
       type: 'message.new',
-      data: message
+      data: { ...message, senderType: message.senderType.toLowerCase() }
     })
 
     // An URGENT message is a patient-initiated crisis escalation ("I need help

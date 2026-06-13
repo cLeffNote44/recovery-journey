@@ -54,10 +54,14 @@ describe('Messages — patient crisis escalation', () => {
     expect(res.statusCode).toBe(200)
     expect(res.json().success).toBe(true)
 
-    // Always delivers the message itself…
+    // Always delivers the message itself, with senderType normalized to the
+    // lowercase the clinient contract expects (else the toast never fires).
     expect(mockBroadcast).toHaveBeenCalledWith(
       'staff:staff-1',
-      expect.objectContaining({ type: 'message.new' })
+      expect.objectContaining({
+        type: 'message.new',
+        data: expect.objectContaining({ senderType: 'patient' }),
+      })
     )
     // …and additionally raises the crisis alert.
     expect(mockBroadcast).toHaveBeenCalledWith(
@@ -77,6 +81,7 @@ describe('Messages — patient crisis escalation', () => {
   it('does NOT fire patient.alert for a normal-priority message', async () => {
     mockPrisma.message.create.mockResolvedValue({
       id: 'msg-2',
+      senderType: 'PATIENT',
       content: 'just checking in',
       sentAt: new Date(),
       priority: 'NORMAL',
