@@ -1,0 +1,15 @@
+packages:
+  - 'Backend'
+  - 'Journey'
+  - 'Recover'
+
+# pnpm 10 blocks dependency build scripts by default; allow the ones this repo
+# genuinely needs (Prisma client generation, esbuild/electron native binaries).
+onlyBuiltDependencies:
+  - esbuild
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
+  - electron
+  - core-js
+  - msw

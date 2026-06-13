@@ -3,19 +3,14 @@
   "version": "1.11.0",
   "description": "HIPAA-compliant substance abuse recovery management platform",
   "private": true,
-  "workspaces": [
-    "Backend",
-    "Journey",
-    "Recover"
-  ],
   "scripts": {
     "prepare": "husky install || true",
-    "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present",
-    "dev:backend": "npm run dev --workspace=Backend",
-    "dev:journey": "npm run dev --workspace=Journey",
-    "dev:recover": "npm run dev --workspace=Recover",
+    "lint": "pnpm -r --if-present run lint",
+    "test": "pnpm -r --if-present run test",
+    "build": "pnpm -r --if-present run build",
+    "dev:backend": "pnpm --filter ./Backend run dev",
+    "dev:journey": "pnpm --filter ./Journey run dev",
+    "dev:recover": "pnpm --filter ./Recover run dev",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
@@ -42,5 +37,6 @@
     "clinical-software"
   ],
   "author": "Recovery Journey <contact@recoveryjourney.co>",
-  "license": "SEE LICENSE IN LICENSE"
+  "license": "SEE LICENSE IN LICENSE",
+  "packageManager": "pnpm@10.33.0"
 }
