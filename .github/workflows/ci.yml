@@ -7,7 +7,9 @@ on:
     branches: [main, develop]
 
 env:
-  NODE_VERSION: '20'
+  # Node 22 LTS — required by Vite 7 (needs >=20.19 || >=22.12) and matches the
+  # Backend Docker base image.
+  NODE_VERSION: '22'
 
 jobs:
   # ===========================================
@@ -24,21 +26,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: './Backend/package-lock.json'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run ESLint
-        run: npm run lint
+        run: pnpm run lint
 
       - name: Check TypeScript
-        run: npx tsc --noEmit
+        run: pnpm exec tsc --noEmit
 
   backend-test:
     name: Backend Tests
@@ -67,29 +71,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: './Backend/package-lock.json'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
-        run: npx prisma generate
+        run: pnpm exec prisma generate
 
       - name: Run database migrations
-        run: npx prisma migrate deploy
+        run: pnpm exec prisma migrate deploy
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/recovery_journey_test?schema=public
 
-      - name: Install native build deps (npm optional-deps + workspaces bug, npm/cli#4828)
-        run: npm install --no-save "@rollup/rollup-linux-x64-gnu@$(node -p "require('./package-lock.json').packages['node_modules/rollup'].version")"
-
       - name: Run tests
-        run: npm run test:run
+        run: pnpm run test:run
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/recovery_journey_test?schema=public
           JWT_SECRET: test-jwt-secret-for-ci-testing-only-not-for-production
@@ -117,18 +120,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: './Backend/package-lock.json'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -151,21 +156,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: './Journey/package-lock.json'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run ESLint
-        run: npm run lint
+        run: pnpm run lint
 
       - name: Check TypeScript
-        run: npx tsc --noEmit
+        run: pnpm exec tsc --noEmit
 
   journey-test:
     name: Journey Tests
@@ -179,21 +186,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: './Journey/package-lock.json'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Install native build deps (npm optional-deps + workspaces bug, npm/cli#4828)
-        run: npm install --no-save "@rollup/rollup-linux-x64-gnu@$(node -p "require('./package-lock.json').packages['node_modules/rollup'].version")"
+        run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: npm run test:run
+        run: pnpm run test:run
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v4
@@ -216,21 +222,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: './Journey/package-lock.json'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Install native build deps (npm optional-deps + workspaces bug, npm/cli#4828)
-        run: npm install --no-save "@rollup/rollup-linux-x64-gnu@$(node -p "require('./package-lock.json').packages['node_modules/rollup'].version")"
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
   journey-e2e:
     name: Journey E2E
@@ -250,24 +255,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: './Journey/package-lock.json'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Install native build deps (npm optional-deps + workspaces bug, npm/cli#4828)
-        run: npm install --no-save "@rollup/rollup-linux-x64-gnu@$(node -p "require('./package-lock.json').packages['node_modules/rollup'].version")"
+        run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run Playwright E2E tests
-        run: npm run test:e2e
+        run: pnpm run test:e2e
 
       - name: Upload Playwright report
         if: failure()
@@ -291,18 +295,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: './Recover/package-lock.json'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run ESLint
-        run: npm run lint
+        run: pnpm run lint
 
       # No `tsc --noEmit` gate here: Recover ships via esbuild (Vite) and has
       # pre-existing type errors that are tracked separately — type-checking is
@@ -321,25 +327,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: './Recover/package-lock.json'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Install native build deps (npm optional-deps + workspaces bug, npm/cli#4828)
-        run: |
-          npm install --no-save \
-            "@rollup/rollup-linux-x64-gnu@$(node -p "require('./package-lock.json').packages['node_modules/rollup'].version")" \
-            "@tailwindcss/oxide-linux-x64-gnu@$(node -p "require('./package-lock.json').packages['node_modules/@tailwindcss/oxide'].version")" \
-            "lightningcss-linux-x64-gnu@$(node -p "require('./package-lock.json').packages['node_modules/lightningcss'].version")"
+        run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: npm run test:run
+        run: pnpm run test:run
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v4
@@ -362,29 +363,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: './Recover/package-lock.json'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Install native build deps (npm optional-deps + workspaces bug, npm/cli#4828)
-        run: |
-          npm install --no-save \
-            "@rollup/rollup-linux-x64-gnu@$(node -p "require('./package-lock.json').packages['node_modules/rollup'].version")" \
-            "@tailwindcss/oxide-linux-x64-gnu@$(node -p "require('./package-lock.json').packages['node_modules/@tailwindcss/oxide'].version")" \
-            "lightningcss-linux-x64-gnu@$(node -p "require('./package-lock.json').packages['node_modules/lightningcss'].version")"
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
   # ===========================================
   # Docker Build Verification
   # ===========================================
+  # The Backend image is built standalone from ./Backend (its own
+  # package-lock.json + npm), independent of the pnpm workspace. Unchanged by
+  # the pnpm migration.
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
@@ -418,28 +417,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
 
-      - name: Audit Backend dependencies
-        working-directory: ./Backend
-        run: npm audit --audit-level=high
-        # Informational: known pre-existing transitive-dependency CVEs are
-        # surfaced in the logs but do not gate merges (tracked separately).
-        continue-on-error: true
-
-      - name: Audit Journey dependencies
-        working-directory: ./Journey
-        run: npm audit --audit-level=high
-        # Informational: known pre-existing transitive-dependency CVEs are
-        # surfaced in the logs but do not gate merges (tracked separately).
-        continue-on-error: true
-
-      - name: Audit Recover dependencies
-        working-directory: ./Recover
-        run: npm audit --audit-level=high
+      - name: Audit workspace dependencies (pnpm)
+        run: pnpm audit --audit-level=high
         # Informational: known pre-existing transitive-dependency CVEs are
         # surfaced in the logs but do not gate merges (tracked separately).
         continue-on-error: true
