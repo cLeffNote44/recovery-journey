@@ -10,7 +10,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useFacilityStore } from '@/stores/useFacilityStore';
-import { useRecoveryStore, useSettingsStore } from '@/stores';
+import { useJournalStore, useActivitiesStore, useSettingsStore } from '@/stores';
+import { connectFacilityWebSocket, disconnectFacilityWebSocket } from '@/lib/facility-ws';
 import {
   validateRegistrationKey,
   disconnectFromFacility,
@@ -269,9 +270,11 @@ function SyncButton() {
   const [isSyncing, setIsSyncing] = useState(false);
   const { syncStatus } = useFacilityStore();
 
-  // Get data from recovery stores
-  const checkIns = useRecoveryStore((state) => state.checkIns);
-  const cravings = useRecoveryStore((state) => state.cravings);
+  // Check-ins live in the journal store and cravings in the activities store
+  // (they were previously read from useRecoveryStore, which has neither — so
+  // the two most clinically important data types silently never synced).
+  const checkIns = useJournalStore((state) => state.checkIns);
+  const cravings = useActivitiesStore((state) => state.cravings);
   const goals = useSettingsStore((state) => state.goals);
   const goalProgress = useSettingsStore((state) => state.goalProgress);
 
@@ -680,6 +683,14 @@ export function FacilityScreen() {
   useEffect(() => {
     checkConnection();
   }, []);
+
+  // Keep a real-time connection open while linked to a facility so counselor
+  // messages arrive live (instead of only on manual refresh).
+  useEffect(() => {
+    if (!isConnected) return;
+    connectFacilityWebSocket();
+    return () => disconnectFacilityWebSocket();
+  }, [isConnected]);
 
   return (
     <div className="space-y-6">

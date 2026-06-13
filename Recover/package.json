@@ -10,6 +10,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
+    "lint": "eslint . --ext .ts,.tsx",
     "vercel-build": "vite build",
     "check:orphans": "unimported",
     "check:backups": "node scripts/check-backup-files.js",

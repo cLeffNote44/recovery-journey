@@ -163,7 +163,7 @@ test.describe('Treatment Plans Page', () => {
     await expect(modal).toBeVisible()
 
     // Check modal title
-    await expect(page.getByRole('heading', { name: /assign plan/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /assign treatment plan/i })).toBeVisible()
   })
 
   test('should display patient list in assign modal', async ({ page }) => {

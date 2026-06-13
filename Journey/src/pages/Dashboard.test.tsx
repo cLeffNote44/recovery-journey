@@ -65,7 +65,7 @@ describe('Dashboard', () => {
     })
 
     it('should show default greeting when no user name', async () => {
-      ;(useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
         user: { ...mockUser, first_name: undefined },
       })
 
@@ -108,7 +108,7 @@ describe('Dashboard', () => {
 
   describe('Loading State', () => {
     it('should show loading skeletons initially', () => {
-      ;(facilityAPI.getDashboard as ReturnType<typeof vi.fn>).mockReturnValue(
+      (facilityAPI.getDashboard as ReturnType<typeof vi.fn>).mockReturnValue(
         new Promise(() => {}) // Never resolves
       )
 
@@ -130,7 +130,7 @@ describe('Dashboard', () => {
     })
 
     it('should handle API failure gracefully', async () => {
-      ;(facilityAPI.getDashboard as ReturnType<typeof vi.fn>).mockRejectedValue(
+      (facilityAPI.getDashboard as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Network error')
       )
 

@@ -627,7 +627,7 @@ function analyzeStreakPatterns(checkIns: CheckIn[]): {
 } {
   const sortedCheckIns = [...checkIns].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  let streaks: number[] = [];
+  const streaks: number[] = [];
   let currentStreak = 1;
   let prevDate: Date | null = null;
 
@@ -917,7 +917,7 @@ function calculateCurrentStreak(checkIns: CheckIn[]): number {
   const sortedCheckIns = [...checkIns].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   let streak = 0;
-  let currentDate = new Date();
+  const currentDate = new Date();
   currentDate.setHours(0, 0, 0, 0);
 
   for (const checkIn of sortedCheckIns) {

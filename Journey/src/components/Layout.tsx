@@ -3,12 +3,17 @@ import Sidebar from './Sidebar'
 import Header from './Header'
 import { SessionTimeoutWarning } from './SessionTimeoutWarning'
 import { OfflineIndicator, OfflineBanner, UpdatePrompt } from './OfflineIndicator'
+import { useWebSocket } from '../hooks/useWebSocket'
 
 interface LayoutProps {
   children: ReactNode
 }
 
 export default function Layout({ children }: LayoutProps) {
+  // Activate the real-time connection for the whole authenticated app:
+  // live patient messages, check-ins, and concerning-symptom alerts.
+  useWebSocket()
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Sidebar */}

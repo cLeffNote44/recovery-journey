@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- intentional fallback diagnostics; stripped from prod builds */
 import * as Sentry from '@sentry/react'
 
 /**

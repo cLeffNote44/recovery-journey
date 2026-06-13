@@ -267,8 +267,7 @@ export function JournalScreen() {
     handleAddCraving();
     if (celebrationsEnabled && newCraving.overcame) {
       setTimeout(() => {
-        const { celebrate } = require('@/lib/celebrations');
-        celebrate('cravingOvercome');
+        void import('@/lib/celebrations').then(({ celebrate }) => celebrate('cravingOvercome'));
       }, 300);
     }
   };

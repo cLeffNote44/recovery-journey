@@ -145,7 +145,7 @@ export default function WelcomeWizard({ onComplete }: WizardProps) {
                 <Building2 className="w-8 h-8 text-blue-600" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Welcome to Recover</h2>
-              <p className="text-gray-600 mt-2">Let's set up your first facility</p>
+              <p className="text-gray-600 mt-2">Let&apos;s set up your first facility</p>
             </div>
 
             <div className="space-y-4">

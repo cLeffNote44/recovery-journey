@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- intentional dev-only performance logging; stripped from prod builds */
 import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query'
 
 // =============================================================================
@@ -213,6 +214,17 @@ export const queryKeys = {
     all: ['dashboard'] as const,
     facility: (facilityId: string) => [...queryKeys.dashboard.all, 'facility', facilityId] as const,
     stats: () => [...queryKeys.dashboard.all, 'stats'] as const,
+    alerts: () => [...queryKeys.dashboard.all, 'alerts'] as const,
+    recentMessages: () => [...queryKeys.dashboard.all, 'recent-messages'] as const,
+  },
+
+  // Treatment Plans
+  treatmentPlans: {
+    all: ['treatmentPlans'] as const,
+    lists: () => [...queryKeys.treatmentPlans.all, 'list'] as const,
+    list: (filters: object) => [...queryKeys.treatmentPlans.lists(), filters] as const,
+    details: () => [...queryKeys.treatmentPlans.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.treatmentPlans.details(), id] as const,
   },
 
   // Facilities

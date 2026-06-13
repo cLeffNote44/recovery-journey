@@ -9,4 +9,5 @@ export type {
   TreatmentPhase,
   TreatmentPlan,
   NewPlanFormData,
+  EditPlanUpdates,
 } from './TreatmentPlanModals'

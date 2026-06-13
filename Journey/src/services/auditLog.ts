@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- intentional dev diagnostics; stripped from prod builds */
 import api from './api'
 
 /**

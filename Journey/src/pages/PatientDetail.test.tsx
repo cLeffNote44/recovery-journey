@@ -79,7 +79,7 @@ describe('PatientDetail', () => {
   describe('Loading State', () => {
     it('should show loading state initially', () => {
       // Make the promise hang
-      ;(patientsAPI.getDashboard as ReturnType<typeof vi.fn>).mockReturnValue(
+      (patientsAPI.getDashboard as ReturnType<typeof vi.fn>).mockReturnValue(
         new Promise(() => {})
       )
 
@@ -164,7 +164,7 @@ describe('PatientDetail', () => {
     })
 
     it('should handle API failure gracefully', async () => {
-      ;(patientsAPI.getDashboard as ReturnType<typeof vi.fn>).mockRejectedValue(
+      (patientsAPI.getDashboard as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Network error')
       )
 

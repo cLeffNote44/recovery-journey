@@ -6,6 +6,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { createEncryptedStorage } from '@/lib/encrypted-storage';
 import type {
   NotificationSettings,
   Goal,
@@ -325,6 +326,7 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'settings-store',
+      storage: createEncryptedStorage(),
     }
   )
 );

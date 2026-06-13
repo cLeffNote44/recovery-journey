@@ -477,9 +477,10 @@ export function exportData(
       }
       break;
 
-    case 'all':
+    case 'all': {
       const allFiles = exportAllDataCSV(allData, options);
       downloadMultipleCSVs(allFiles, `recovery-journey-${timestamp}`);
       break;
+    }
   }
 }

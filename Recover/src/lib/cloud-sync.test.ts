@@ -62,6 +62,9 @@ vi.mock('./supabase', () => ({
         download: vi.fn(() => Promise.resolve({ data: new Blob(), error: null })),
         list: vi.fn(() => Promise.resolve({ data: [], error: null })),
         remove: vi.fn(() => Promise.resolve({ data: {}, error: null })),
+        createSignedUrl: vi.fn(() =>
+          Promise.resolve({ data: { signedUrl: 'https://signed.example/backup' }, error: null })
+        ),
       })),
     },
   },
@@ -613,6 +616,20 @@ describe('CloudSyncService', () => {
       const restored = await service.restoreBackup(backup);
 
       expect(restored).toEqual(originalData);
+    });
+  });
+
+  describe('uploadBackup (HIPAA encryption guard)', () => {
+    it('should refuse to upload an unencrypted backup', async () => {
+      const service = new CloudSyncService();
+      const data = { sobrietyDate: '2024-01-01' } as any;
+
+      // No password => unencrypted backup
+      const backup = await service.createBackup(data);
+      expect(backup.metadata.encrypted).toBe(false);
+
+      const result = await service.uploadBackup(backup, 'user-123');
+      expect(result.success).toBe(false);
     });
   });
 });

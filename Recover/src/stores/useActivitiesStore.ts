@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Craving, CalendarEvent } from '@/types/app';
 import { sanitizeText } from '@/lib/sanitize';
+import { createEncryptedStorage } from '@/lib/encrypted-storage';
 
 interface ActivitiesState {
   // State
@@ -94,6 +95,7 @@ export const useActivitiesStore = create<ActivitiesState>()(
     }),
     {
       name: 'activities-store',
+      storage: createEncryptedStorage(),
     }
   )
 );

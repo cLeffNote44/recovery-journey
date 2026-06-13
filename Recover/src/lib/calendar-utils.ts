@@ -31,7 +31,7 @@ export function generateRecurringInstances(
     : [];
 
   // Start iterating from the event's original date
-  let currentDate = new Date(eventDate);
+  const currentDate = new Date(eventDate);
 
   while (currentDate <= effectiveEndDate && iterationCount < maxIterations) {
     iterationCount++;

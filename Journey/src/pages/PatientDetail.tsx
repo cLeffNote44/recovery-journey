@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { patientsAPI } from '../services/api'
 import { auditLog } from '../services/auditLog'
+import { sanitizeForDisplay } from '../lib/sanitize'
 import {
   mockPatientDetail,
   mockTimeline,
@@ -835,7 +836,7 @@ function DocumentsTab({ patientId, patientName }: DocumentsTabProps) {
             </div>
             <div
               className="prose dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: viewingDoc.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(viewingDoc.content) }}
             />
           </div>
         </div>

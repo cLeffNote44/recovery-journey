@@ -16,6 +16,7 @@ vi.mock('../lib/prisma.js', () => {
     findMany: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    updateMany: vi.fn(),
     upsert: vi.fn(),
     delete: vi.fn(),
     deleteMany: vi.fn(),
@@ -69,6 +70,9 @@ vi.mock('../lib/metrics.js', () => ({
 
 vi.mock('../middleware/security.js', () => ({
   registerSecurityMiddleware: vi.fn().mockResolvedValue(undefined),
+  checkBruteForce: vi.fn().mockResolvedValue({ allowed: true, remainingAttempts: 5, lockedUntil: null }),
+  recordFailedLogin: vi.fn().mockResolvedValue(undefined),
+  resetLoginAttempts: vi.fn(),
 }))
 
 vi.mock('../middleware/sanitize.js', () => ({
@@ -116,6 +120,7 @@ import Fastify from 'fastify'
 import jwt from '@fastify/jwt'
 import { authRoutes } from '../routes/auth.js'
 import { patientSyncRoutes } from '../routes/patient-sync.js'
+import { adminRoutes } from '../routes/admin.js'
 import { errorHandler } from '../lib/error-handler.js'
 
 export const TEST_JWT_SECRET = 'test-secret-key-that-is-long-enough-for-testing'
@@ -131,6 +136,7 @@ export async function buildApp() {
   app.setErrorHandler(errorHandler)
   app.register(authRoutes, { prefix: '/api/v1/auth' })
   app.register(patientSyncRoutes, { prefix: '/api/v1/sync' })
+  app.register(adminRoutes, { prefix: '/api/v1/admin' })
 
   await app.ready()
   return app
@@ -151,6 +157,9 @@ export function makeStaff(overrides: Record<string, any> = {}) {
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastLoginAt: null,
+    twoFactorEnabled: false,
+    twoFactorSecret: null,
+    tokenVersion: 0,
     facility: { id: 'facility-1', name: 'Test Facility' },
     ...overrides,
   }

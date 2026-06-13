@@ -6,7 +6,7 @@ import {
   X,
   Lock,
 } from 'lucide-react'
-import { sanitizeRichText } from '../lib/sanitize'
+import { sanitizeRichText, sanitizeForDisplay } from '../lib/sanitize'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -409,9 +409,13 @@ export function templateHasFormFields(html: string): boolean {
 // Rendering helpers
 // ---------------------------------------------------------------------------
 
-/** Render static HTML safely (already sanitised via DOMPurify on save). */
+/**
+ * Render static HTML safely. Content is sanitised on save, but it can also
+ * arrive from the API/sync written by other clients — always re-sanitise at
+ * render time.
+ */
 function StaticHtml({ html }: { html: string }) {
-  return <span dangerouslySetInnerHTML={{ __html: html }} />
+  return <span dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(html) }} />
 }
 
 // ---------------------------------------------------------------------------
@@ -778,7 +782,7 @@ function BlockRenderer({
       return (
         <div
           className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-1 mt-2"
-          dangerouslySetInnerHTML={{ __html: block.html }}
+          dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(block.html) }}
         />
       )
     }
@@ -786,7 +790,7 @@ function BlockRenderer({
       return (
         <div
           className="text-lg text-gray-600 dark:text-gray-400 text-center mb-4"
-          dangerouslySetInnerHTML={{ __html: block.html }}
+          dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(block.html) }}
         />
       )
     }
@@ -794,7 +798,7 @@ function BlockRenderer({
       return (
         <div
           className="text-base font-semibold text-gray-900 dark:text-white mt-6 mb-2 pb-1 border-b border-gray-200 dark:border-gray-700"
-          dangerouslySetInnerHTML={{ __html: block.html }}
+          dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(block.html) }}
         />
       )
     }
@@ -802,7 +806,7 @@ function BlockRenderer({
     return (
       <div
         className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed my-1 [&_strong]:font-semibold"
-        dangerouslySetInnerHTML={{ __html: block.html }}
+        dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(block.html) }}
       />
     )
   }

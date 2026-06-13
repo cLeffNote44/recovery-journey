@@ -203,6 +203,31 @@ export function useCreateAdministrator() {
 }
 
 /**
+ * Hook for creating a new clinician (counselor)
+ */
+export function useCreateClinician() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: CreateAdminData) => {
+      const response = await superAdminAPI.createClinician(data)
+      if (response.success) {
+        return response
+      }
+      throw new Error(response.error || 'Failed to create clinician')
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.clinicians() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.stats() })
+      showToast.success('Clinician created successfully!')
+    },
+    onError: (error: Error) => {
+      showToast.error(error.message)
+    },
+  })
+}
+
+/**
  * Hook for resetting an admin password
  */
 export function useResetAdminPassword() {
@@ -304,7 +329,8 @@ export function useAdminActivity(limit: number = 20) {
     queryFn: async () => {
       const response = await superAdminAPI.getRecentActivity(limit)
       if (response.success) {
-        return { activity: response.activity, isFromApi: true }
+        // Backend returns `activities`; tolerate the legacy `activity` key too.
+        return { activity: response.activities ?? response.activity, isFromApi: true }
       }
       throw new Error('Failed to fetch activity')
     },

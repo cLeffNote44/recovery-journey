@@ -368,6 +368,25 @@ export async function patientRoutes(fastify: FastifyInstance) {
       throw ApiError.forbidden('Access denied to this patient')
     }
 
+    // Moving a patient to another facility removes them from their current
+    // facility's oversight — only super admins may do that.
+    if (body.facilityId && body.facilityId !== existing.facilityId && user.role !== 'SUPER_ADMIN') {
+      throw ApiError.forbidden('Only super admins can change a patient facility')
+    }
+
+    // Counselor reassignment must point at active staff in the patient's facility
+    if (body.assignedCounselorId) {
+      const targetFacilityId = body.facilityId ?? existing.facilityId
+      const counselor = await prisma.staff.findUnique({
+        where: { id: body.assignedCounselorId },
+        select: { facilityId: true, status: true }
+      })
+
+      if (!counselor || counselor.status !== 'ACTIVE' || counselor.facilityId !== targetFacilityId) {
+        throw ApiError.badRequest('Assigned counselor must be active staff at the patient facility')
+      }
+    }
+
     // Build update data
     const updateData: any = { ...body }
     if (body.dateOfBirth) updateData.dateOfBirth = new Date(body.dateOfBirth)

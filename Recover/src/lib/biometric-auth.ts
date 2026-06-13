@@ -41,6 +41,7 @@ export interface PinValidationResult {
 const MAX_PIN_ATTEMPTS = 5; // Maximum failed attempts before lockout
 const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes lockout
 const ATTEMPT_RESET_DURATION_MS = 30 * 60 * 1000; // Reset counter after 30 minutes of no attempts
+const PIN_PBKDF2_ITERATIONS = 100000; // PBKDF2 iterations for PIN hashing
 
 class BiometricAuthManager {
   private static instance: BiometricAuthManager;
@@ -204,7 +205,7 @@ class BiometricAuthManager {
   /**
    * Validate PIN with rate limiting
    */
-  public validatePin(pin: string): PinValidationResult {
+  public async validatePin(pin: string): Promise<PinValidationResult> {
     // Check if locked out
     const lockoutStatus = this.isPinLockedOut();
     if (lockoutStatus.locked) {
@@ -222,8 +223,7 @@ class BiometricAuthManager {
       };
     }
 
-    const pinHash = this.hashPin(pin);
-    const isValid = pinHash === this.settings.pinHash;
+    const isValid = await this.verifyPin(pin, this.settings.pinHash);
 
     if (isValid) {
       // Successful authentication - reset attempts and update last auth time
@@ -266,8 +266,8 @@ class BiometricAuthManager {
   /**
    * Set or update PIN
    */
-  public setPin(pin: string): void {
-    this.settings.pinHash = this.hashPin(pin);
+  public async setPin(pin: string): Promise<void> {
+    this.settings.pinHash = await this.hashPin(pin);
     this.settings.pinEnabled = true;
     this.saveSettings();
   }
@@ -282,17 +282,66 @@ class BiometricAuthManager {
   }
 
   /**
-   * Hash PIN for storage (simple hash - in production use bcrypt or similar)
+   * Hash a PIN for storage using PBKDF2-SHA-256 with a random per-PIN salt.
+   * Returns `pbkdf2$<iterations>$<saltB64>$<hashB64>`.
+   *
+   * (A non-cryptographic 32-bit hash was previously used here, which a 4-6
+   * digit PIN could be brute-forced against in milliseconds.)
    */
-  private hashPin(pin: string): string {
-    // Simple hash for demo - in production, use proper crypto library
-    let hash = 0;
-    for (let i = 0; i < pin.length; i++) {
-      const char = pin.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32bit integer
+  private async hashPin(pin: string): Promise<string> {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const hash = await this.derivePin(pin, salt, PIN_PBKDF2_ITERATIONS);
+    return `pbkdf2$${PIN_PBKDF2_ITERATIONS}$${this.toB64(salt)}$${this.toB64(hash)}`;
+  }
+
+  /**
+   * Verify a PIN against a stored `pbkdf2$...` hash in constant time.
+   */
+  private async verifyPin(pin: string, stored: string): Promise<boolean> {
+    const parts = stored.split('$');
+    if (parts.length !== 4 || parts[0] !== 'pbkdf2') {
+      // Legacy/unknown format — cannot be trusted; require the PIN to be reset.
+      return false;
     }
-    return hash.toString(36);
+    const iterations = parseInt(parts[1], 10) || PIN_PBKDF2_ITERATIONS;
+    const salt = this.fromB64(parts[2]);
+    const expected = this.fromB64(parts[3]);
+    const actual = await this.derivePin(pin, salt, iterations);
+    return this.timingSafeEqual(actual, expected);
+  }
+
+  private async derivePin(pin: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(pin),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveBits']
+    );
+    const bits = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+      keyMaterial,
+      256
+    );
+    return new Uint8Array(bits);
+  }
+
+  private timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
+    if (a.length !== b.length) return false;
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+    return diff === 0;
+  }
+
+  private toB64(bytes: Uint8Array): string {
+    return btoa(String.fromCharCode(...bytes));
+  }
+
+  private fromB64(b64: string): Uint8Array {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
   }
 
   /**
@@ -385,9 +434,9 @@ export const biometricAuthManager = BiometricAuthManager.getInstance();
 export const checkBiometricAvailability = () => biometricAuthManager.checkAvailability();
 export const authenticateBiometric = (reason?: string) => biometricAuthManager.authenticate(reason);
 export const isAuthRequired = () => biometricAuthManager.isAuthRequired();
-export const validatePin = (pin: string) => biometricAuthManager.validatePin(pin);
+export const validatePin = (pin: string): Promise<PinValidationResult> => biometricAuthManager.validatePin(pin);
 export const isPinLockedOut = () => biometricAuthManager.isPinLockedOut();
-export const setPin = (pin: string) => biometricAuthManager.setPin(pin);
+export const setPin = (pin: string): Promise<void> => biometricAuthManager.setPin(pin);
 export const removePin = () => biometricAuthManager.removePin();
 export const getBiometricSettings = () => biometricAuthManager.getSettings();
 export const updateBiometricSettings = (settings: Partial<BiometricSettings>) =>

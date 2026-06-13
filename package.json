@@ -1,6 +1,6 @@
 {
   "name": "recovery-journey",
-  "version": "1.7.2",
+  "version": "1.10.0",
   "description": "HIPAA-compliant substance abuse recovery management platform",
   "private": true,
   "workspaces": [
@@ -9,7 +9,7 @@
     "Recover"
   ],
   "scripts": {
-    "prepare": "husky install",
+    "prepare": "husky install || true",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",

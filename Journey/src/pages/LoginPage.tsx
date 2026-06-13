@@ -11,6 +11,9 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking')
+  // Set when the server requires a TOTP code to complete login
+  const [pendingToken, setPendingToken] = useState<string | null>(null)
+  const [twoFactorCode, setTwoFactorCode] = useState('')
 
   const { login } = useAuthStore()
 
@@ -37,7 +40,10 @@ export default function LoginPage() {
     try {
       const response = await authAPI.staffLogin(email, password)
 
-      if (response.success) {
+      if (response.success && response.requiresTwoFactor) {
+        // Password accepted; a TOTP code is required to complete login
+        setPendingToken(response.pendingToken)
+      } else if (response.success) {
         login(response.user, response.accessToken, response.refreshToken)
       } else {
         throw new Error(response.error || 'Login failed')
@@ -63,6 +69,42 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleTwoFactorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!pendingToken) return
+    setError('')
+    setIsLoading(true)
+
+    try {
+      const response = await authAPI.staffLogin2fa(pendingToken, twoFactorCode)
+
+      if (response.success) {
+        login(response.user, response.accessToken, response.refreshToken)
+      } else {
+        throw new Error(response.error || 'Verification failed')
+      }
+    } catch (err) {
+      const axiosError = err as AxiosError<{ error?: string }>
+
+      if (axiosError.response?.status === 401) {
+        setError(axiosError.response.data?.error || 'Invalid verification code. Please try again.')
+      } else if (axiosError.response?.data?.error) {
+        setError(axiosError.response.data.error)
+      } else {
+        setError('Verification failed. Please try again.')
+      }
+    } finally {
+      setIsLoading(false)
+      setTwoFactorCode('')
+    }
+  }
+
+  const cancelTwoFactor = () => {
+    setPendingToken(null)
+    setTwoFactorCode('')
+    setError('')
   }
 
   return (
@@ -99,8 +141,14 @@ export default function LoginPage() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome back</h2>
-            <p className="text-gray-500 mb-6">Sign in to your account</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              {pendingToken ? 'Two-factor authentication' : 'Welcome back'}
+            </h2>
+            <p className="text-gray-500 mb-6">
+              {pendingToken
+                ? 'Enter the 6-digit code from your authenticator app'
+                : 'Sign in to your account'}
+            </p>
 
             {/* Server Status */}
             {serverStatus === 'offline' && (
@@ -116,6 +164,49 @@ export default function LoginPage() {
               </div>
             )}
 
+            {pendingToken ? (
+            <form onSubmit={handleTwoFactorSubmit} className="space-y-5">
+              <div>
+                <label htmlFor="twoFactorCode" className="block text-sm font-medium text-gray-700 mb-1">
+                  Verification code
+                </label>
+                <input
+                  id="twoFactorCode"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-center text-2xl tracking-[0.5em]"
+                  placeholder="000000"
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading || twoFactorCode.length !== 6}
+                className="w-full py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  'Verify'
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={cancelTwoFactor}
+                className="w-full text-sm text-gray-500 hover:text-gray-700"
+              >
+                Back to sign in
+              </button>
+            </form>
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -181,6 +272,7 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
+            )}
           </div>
         </div>
       </div>

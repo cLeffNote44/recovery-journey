@@ -6,6 +6,8 @@ export const getStatusBadge = (status: string) => {
     pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
     suspended: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
     discharged: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    archived: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    inactive: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
   }
   return (
     <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status] || styles.active}`}>

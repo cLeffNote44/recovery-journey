@@ -34,7 +34,7 @@ export const patientFormSchema = z.object({
     .refine((val) => {
       if (!val || val.trim() === '') return true
       // Accept various phone formats
-      const cleaned = val.replace(/[\s\-\(\)\.]/g, '')
+      const cleaned = val.replace(/[\s\-().]/g, '')
       return /^\+?[0-9]{10,15}$/.test(cleaned)
     }, 'Please enter a valid phone number'),
 
@@ -123,7 +123,7 @@ export const facilitySchema = z.object({
     .string()
     .min(1, 'Phone is required')
     .refine((val) => {
-      const cleaned = val.replace(/[\s\-\(\)\.]/g, '')
+      const cleaned = val.replace(/[\s\-().]/g, '')
       return /^\+?[0-9]{10,15}$/.test(cleaned)
     }, 'Please enter a valid phone number'),
 

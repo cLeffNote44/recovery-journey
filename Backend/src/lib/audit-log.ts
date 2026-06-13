@@ -1,7 +1,9 @@
+import { createHmac } from 'node:crypto'
 import { prisma } from './prisma.js'
 import type { AuditAction } from '@prisma/client'
 import type { FastifyRequest } from 'fastify'
 import logger from './logger.js'
+import { config } from '../config/env.js'
 
 interface AuditContext {
   staffId?: string
@@ -17,6 +19,25 @@ interface AuditEntry {
   phiAccessed?: string[]
   success?: boolean
   errorMessage?: string
+  // When true, a failure to persist this audit record fails the request
+  // rather than being swallowed. Only safe for actions where the audited
+  // operation is performed in the SAME transaction as the audit write (so a
+  // failure rolls the operation back). Do NOT set this for an audit logged
+  // after a separate, already-committed write — that would return an error to
+  // the client while the write stands, risking duplicate/partial state.
+  critical?: boolean
+}
+
+/**
+ * Keyed HMAC over the audit row's canonical contents, for tamper evidence.
+ * Returns null when no AUDIT_SECRET is configured (dev only — production
+ * requires it via env validation).
+ */
+function computeAuditHash(row: Record<string, unknown>): string | null {
+  const secret = config.AUDIT_SECRET
+  if (!secret) return null
+  const canonical = JSON.stringify(row)
+  return createHmac('sha256', secret).update(canonical).digest('hex')
 }
 
 /**
@@ -51,27 +72,40 @@ export class AuditLogger {
    * Log an audit entry
    */
   async log(entry: AuditEntry): Promise<void> {
+    const timestamp = new Date()
+    const row = {
+      staffId: this.context.staffId ?? null,
+      patientActorId: this.context.patientActorId ?? null,
+      action: entry.action,
+      resourceType: entry.resourceType,
+      resourceId: entry.resourceId ?? null,
+      description: entry.description ?? null,
+      phiAccessed: entry.phiAccessed ?? [],
+      ipAddress: this.context.request?.ip ?? null,
+      userAgent: this.context.request?.headers['user-agent'] ?? null,
+      sessionId: this.context.request?.id ?? null,
+      success: entry.success ?? true,
+      errorMessage: entry.errorMessage ?? null,
+      timestamp: timestamp.toISOString()
+    }
+
     try {
       await prisma.auditLog.create({
         data: {
-          staffId: this.context.staffId,
-          patientActorId: this.context.patientActorId,
-          action: entry.action,
-          resourceType: entry.resourceType,
-          resourceId: entry.resourceId,
-          description: entry.description,
-          phiAccessed: entry.phiAccessed ?? [],
-          ipAddress: this.context.request?.ip,
-          userAgent: this.context.request?.headers['user-agent'],
-          sessionId: this.context.request?.id,
-          success: entry.success ?? true,
-          errorMessage: entry.errorMessage
+          ...row,
+          timestamp,
+          hash: computeAuditHash(row)
         }
       })
     } catch (error) {
-      // Audit logging should never throw - log as backup via structured logger
+      // Always surface the failure to the structured logger.
       logger.error('Failed to write audit log', error as Error)
       logger.error('Audit entry that failed to persist', undefined, { entry })
+      // For high-sensitivity actions, a missing audit record means the action
+      // must not be treated as completed — fail the request.
+      if (entry.critical) {
+        throw error
+      }
     }
   }
 

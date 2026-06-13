@@ -4,6 +4,7 @@ import * as OTPAuth from 'otpauth'
 import QRCode from 'qrcode'
 import { prisma } from '../lib/prisma.js'
 import { ApiError } from '../lib/error-handler.js'
+import { createTotp, validateTotpCode } from '../lib/totp.js'
 import { requireStaff } from '../middleware/auth.js'
 
 const verifyCodeSchema = z.object({
@@ -37,14 +38,7 @@ export async function twoFactorRoutes(fastify: FastifyInstance) {
 
     // Generate TOTP secret
     const secret = new OTPAuth.Secret({ size: 20 })
-    const totp = new OTPAuth.TOTP({
-      issuer: 'Recovery Journey',
-      label: staff.email,
-      algorithm: 'SHA1',
-      digits: 6,
-      period: 30,
-      secret,
-    })
+    const totp = createTotp(staff.email, secret.base32)
 
     // Store secret (not yet enabled — user must verify first)
     await prisma.staff.update({
@@ -85,18 +79,7 @@ export async function twoFactorRoutes(fastify: FastifyInstance) {
     }
 
     // Verify the code
-    const totp = new OTPAuth.TOTP({
-      issuer: 'Recovery Journey',
-      label: staff.email,
-      algorithm: 'SHA1',
-      digits: 6,
-      period: 30,
-      secret: OTPAuth.Secret.fromBase32(staff.twoFactorSecret),
-    })
-
-    const delta = totp.validate({ token: body.code, window: 1 })
-
-    if (delta === null) {
+    if (!validateTotpCode(staff.email, staff.twoFactorSecret, body.code)) {
       throw ApiError.badRequest('Invalid verification code. Please try again.')
     }
 
@@ -127,18 +110,7 @@ export async function twoFactorRoutes(fastify: FastifyInstance) {
       throw ApiError.badRequest('Two-factor authentication is not enabled')
     }
 
-    const totp = new OTPAuth.TOTP({
-      issuer: 'Recovery Journey',
-      label: staff.email,
-      algorithm: 'SHA1',
-      digits: 6,
-      period: 30,
-      secret: OTPAuth.Secret.fromBase32(staff.twoFactorSecret),
-    })
-
-    const delta = totp.validate({ token: body.code, window: 1 })
-
-    if (delta === null) {
+    if (!validateTotpCode(staff.email, staff.twoFactorSecret, body.code)) {
       throw ApiError.unauthorized('Invalid two-factor code')
     }
 
@@ -176,17 +148,7 @@ export async function twoFactorRoutes(fastify: FastifyInstance) {
     }
 
     // Verify TOTP code
-    const totp = new OTPAuth.TOTP({
-      issuer: 'Recovery Journey',
-      label: staff.email,
-      algorithm: 'SHA1',
-      digits: 6,
-      period: 30,
-      secret: OTPAuth.Secret.fromBase32(staff.twoFactorSecret),
-    })
-
-    const delta = totp.validate({ token: body.code, window: 1 })
-    if (delta === null) {
+    if (!validateTotpCode(staff.email, staff.twoFactorSecret, body.code)) {
       throw ApiError.badRequest('Invalid two-factor code')
     }
 

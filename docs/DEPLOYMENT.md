@@ -51,8 +51,8 @@ RATE_LIMIT_WINDOW_MS=60000
 
 ### Environment-Specific Files
 
-- `deploy/staging/.env.staging` -- Staging-specific non-secret overrides
-- `deploy/production/.env.production` -- Production-specific non-secret overrides
+- `deploy/staging/.env.staging.example` -- Staging-specific non-secret overrides
+- `deploy/production/.env.production.example` -- Production-specific non-secret overrides
 
 These files should contain only non-secret configuration. All secrets must be injected via the host environment or a secrets manager.
 
@@ -141,21 +141,28 @@ The production override (`docker-compose.prod.yml`) applies:
 ### Using the Rollback Script
 
 ```bash
-# Rollback to the previous version
+# Rollback to the previous deploy (recorded in .deployed_version.previous)
 ./scripts/rollback.sh staging
 ./scripts/rollback.sh production
 
-# Rollback to a specific version
-./scripts/rollback.sh staging v1.2.3
-./scripts/rollback.sh production v1.2.3
+# Rollback to a specific image tag.
+# NOTE: CD strips the leading `v` from git tags when tagging images —
+# a `v1.2.3` release is image tag `1.2.3`.
+./scripts/rollback.sh staging 1.2.3
+./scripts/rollback.sh production 1.2.3
 ```
 
 ### What the Rollback Script Does
 
-1. Lists available Docker image version tags.
-2. Defaults to the second-most-recent tag (the previous deployment).
-3. Swaps the running container to the target version.
-4. Verifies the health check passes.
+1. Reads the previously deployed tag from `.deployed_version.previous`
+   (falls back to the second-most-recent local image tag).
+2. Pulls the image from GHCR if it is not cached locally.
+3. Swaps the running backend container to the target tag
+   (`docker compose ... up -d --no-build --no-deps backend`).
+4. Verifies `http://localhost:8000/health` and updates the version records.
+
+Database migrations are **not** rolled back automatically — restore from the
+pre-deploy backup if the bad release included schema changes.
 
 ---
 
@@ -244,7 +251,13 @@ The GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push:
 2. **Test** -- Vitest unit tests per workspace
 3. **Build** -- Production builds for all workspaces
 
-Deployment to staging or production is triggered manually via `./scripts/deploy.sh`.
+Deployment is automated via `.github/workflows/cd.yml`: pushes to `main`
+deploy to staging, `v*` tags deploy to production (with a GitHub release on
+success). The backend ships as a tagged image from GHCR; the server pulls it,
+runs migrations in the compose network, and records the deployed tag for
+rollback. `./scripts/deploy.sh` remains available for manual, on-server
+deploys — see `deploy/README.md` for the authoritative procedure, required
+secrets, and first-deploy bootstrap steps.
 
 ---
 

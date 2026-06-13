@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- intentional connection diagnostics; stripped from prod builds */
 /**
  * WebSocket Service for Real-Time Communication
  *
@@ -19,25 +20,32 @@ export type WebSocketMessageType =
   | 'message.new'
   | 'message.read'
   | 'message.typing'
+  | 'typing'
   | 'patient.updated'
   | 'patient.checkin'
+  | 'patient.alert'
   | 'notification'
   | 'ping'
   | 'pong'
   | 'error'
 
+// Wire envelope. The server uses `{ type, data }` (see Backend websocket
+// handler); `data` is what every handler receives.
 export interface WebSocketMessage<T = unknown> {
   type: WebSocketMessageType
-  payload: T
-  timestamp: string
+  data: T
+  timestamp?: string
 }
 
+// Shapes below mirror what the Backend broadcasts (see Backend routes
+// messages.ts / patient-sync.ts).
 export interface NewMessagePayload {
   id: string
   patientId: string
   content: string
-  sender: 'clinician' | 'patient'
-  sentAt: string
+  senderType: 'staff' | 'patient'
+  senderName?: string
+  createdAt: string
 }
 
 export interface TypingPayload {
@@ -47,9 +55,18 @@ export interface TypingPayload {
 
 export interface PatientCheckinPayload {
   patientId: string
-  checkinId: string
-  mood: number
-  cravingLevel: number
+  patientName: string
+  checkIn: { mood: number; date: string; wellnessScore: number | null }
+  isConcerning: boolean
+}
+
+export interface PatientAlertPayload {
+  patientId: string
+  patientName: string
+  alertType: string
+  severity: 'high' | 'critical'
+  title: string
+  description: string
   timestamp: string
 }
 
@@ -157,12 +174,10 @@ class WebSocketService {
       return
     }
 
-    // Build URL with auth token
-    const url = new URL(this.config.url)
-    url.searchParams.set('token', token)
-
     try {
-      this.socket = new WebSocket(url.toString())
+      // The server authenticates via an `auth` message after connect, NOT a
+      // token in the URL — this keeps the JWT out of server/proxy access logs.
+      this.socket = new WebSocket(this.config.url)
 
       // Connection timeout
       const timeoutId = setTimeout(() => {
@@ -175,6 +190,8 @@ class WebSocketService {
       this.socket.onopen = () => {
         clearTimeout(timeoutId)
         console.log('[WS] Connected')
+        // Authenticate over the socket before anything else.
+        this.socket?.send(JSON.stringify({ type: 'auth', data: { token } }))
         this.setStatus('connected')
         this.reconnectAttempts = 0
         this.startHeartbeat()
@@ -255,7 +272,7 @@ class WebSocketService {
   send<T>(type: WebSocketMessageType, payload: T): void {
     const message: WebSocketMessage<T> = {
       type,
-      payload,
+      data: payload,
       timestamp: new Date().toISOString(),
     }
 
@@ -332,9 +349,15 @@ class WebSocketService {
         return
       }
 
-      // Log non-ping messages in dev
+      // The server also pings us; reply so it knows we're alive.
+      if (message.type === 'ping') {
+        this.socket?.send(JSON.stringify({ type: 'pong' }))
+        return
+      }
+
+      // Log messages in dev
       if (process.env.NODE_ENV === 'development') {
-        console.log('[WS] Received:', message.type, message.payload)
+        console.log('[WS] Received:', message.type, message.data)
       }
 
       // Notify handlers
@@ -342,7 +365,7 @@ class WebSocketService {
       if (handlers) {
         handlers.forEach((handler) => {
           try {
-            handler(message.payload)
+            handler(message.data)
           } catch (error) {
             console.error('[WS] Handler error:', error)
           }

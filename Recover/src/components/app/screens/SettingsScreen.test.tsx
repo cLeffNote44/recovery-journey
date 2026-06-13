@@ -14,7 +14,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SettingsScreen } from './SettingsScreen';
-import { BrowserRouter } from 'react-router-dom';
+import { Router } from 'wouter';
 import { toast } from 'sonner';
 
 // Mock notifications library
@@ -33,11 +33,11 @@ vi.mock('@/lib/data-backup', () => ({
     exportDate: '',
     version: '1.0.0',
   })),
-  getAutoBackups: vi.fn(() => []),
-  restoreAutoBackup: vi.fn(),
+  getAutoBackups: vi.fn(() => Promise.resolve([])),
+  restoreAutoBackup: vi.fn(() => Promise.resolve({ success: true })),
   deleteAutoBackup: vi.fn(),
   getDaysSinceLastBackup: vi.fn(() => 0),
-  createAutoBackup: vi.fn(),
+  createAutoBackup: vi.fn(() => Promise.resolve()),
 }));
 
 // Mock CSV export
@@ -147,9 +147,9 @@ vi.mock('@/hooks/useAppData', () => ({
 
 const renderWithRouter = (component: React.ReactElement) => {
   return render(
-    <BrowserRouter>
+    <Router>
       {component}
-    </BrowserRouter>
+    </Router>
   );
 };
 

@@ -27,7 +27,8 @@ interface WebSocketMessage {
 
 interface AuthData {
   token: string
-  userType: 'staff' | 'patient'
+  // NOTE: clients may still send a userType field; it is ignored. The user
+  // type is derived from the verified token payload (see handleAuth).
 }
 
 interface TypingData {
@@ -121,7 +122,25 @@ async function handleAuth(
   try {
     // Verify JWT token
     const decoded = await request.server.jwt.verify<DecodedToken>(data.token)
-    const userId = `${data.userType}:${decoded.id}`
+
+    // Derive the user type from the verified token payload — never from
+    // client input, which would let a patient register as staff (or vice
+    // versa) and receive broadcasts addressed to the other party.
+    const userType = 'email' in decoded
+      ? 'staff'
+      : decoded['type'] === 'patient'
+        ? 'patient'
+        : null
+
+    if (!userType) {
+      socket.send(JSON.stringify({
+        type: 'auth_error',
+        data: { message: 'Invalid token' }
+      }))
+      return null
+    }
+
+    const userId = `${userType}:${decoded.id}`
 
     // Register connection
     addClient(userId, socket)
@@ -158,6 +177,12 @@ function handleTyping(
   if (!senderId) return
 
   const recipientKey = data.recipientId
+
+  // Only forward typing indicators within the sender's own facility.
+  // Connections without a facility association don't participate.
+  const senderFacility = userFacilities.get(senderId)
+  if (!senderFacility || userFacilities.get(recipientKey) !== senderFacility) return
+
   broadcastToUser(recipientKey, {
     type: 'typing',
     data: {

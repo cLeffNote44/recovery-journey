@@ -5,6 +5,163 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-06-12
+
+### Security
+- Access-token revocation: staff access tokens now carry a `tokenVersion`, and
+  `requireStaff` re-validates the token against the live staff record (status +
+  tokenVersion) on every request — a deactivated or role-changed staff member
+  loses access immediately instead of at token expiry. Deactivation bumps
+  `tokenVersion` (invalidating all outstanding access tokens) in addition to
+  revoking refresh tokens.
+- IP + identifier brute-force throttling is now wired into staff login (the
+  existing `checkBruteForce`/`recordFailedLogin` helpers were never called),
+  layered on top of the per-account DB lockout.
+- Audit logs are tamper-evident: each row stores a keyed HMAC (AUDIT_SECRET)
+  over its canonical contents, so after-the-fact in-place edits of a row are
+  detectable. (A hash chain for delete/reorder detection, and same-transaction
+  "fail the request if the audit write fails" enforcement, are tracked as
+  follow-ups — the latter requires wrapping each mutation and its audit row in
+  one transaction to avoid leaving a committed-but-unaudited partial state.)
+- Journey (Electron): the renderer is hardened with `sandbox: true` +
+  `webSecurity: true`; navigation and redirects are locked to the app origin;
+  new-window creation is denied (http(s) links open in the OS browser);
+  `<webview>` embedding is blocked; and all permission/device requests are
+  denied. The auto-update code-signing requirement is documented in main.ts.
+
+### Fixed
+- Recover: `RecoveryProgressChart` called `useMemo` after an early return
+  (conditional hooks — a React "rendered fewer hooks" crash risk); the memos
+  now run unconditionally.
+- Recover: the `HomeScreen` and `SettingsScreen` test suites imported
+  `react-router-dom` (the app uses Wouter) and never loaded — fixed; both run.
+
+### Added
+- Recover: a `lint` script (the workspace had none, so CI's recover-lint job
+  silently did nothing); fixed all 10 lint errors it surfaced (a conditional
+  hook, a `require()` in module code, `prefer-const`, `no-case-declarations`).
+- Journey E2E (Playwright) now runs in CI and gates merges via `ci-success`.
+
+### Changed
+- Backend: Prisma migration `20260612000000_token_version_and_audit_hash` adds
+  `staff.token_version` and `audit_logs.hash` (additive, non-breaking).
+
+## [1.9.0] - 2026-06-12
+
+### Security
+- Recover (patient app): all persisted PHI is now encrypted at rest with
+  AES-256-GCM. A non-extractable WebCrypto master key is held in IndexedDB so
+  its raw bytes never leave the crypto engine; every Zustand store (journal,
+  recovery, activities, settings, quotes, and facility messages/treatment
+  plan) is transparently encrypted, with legacy plaintext migrated on first
+  write
+- Recover: Android `allowBackup="false"` + `fullBackupContent="false"` +
+  `dataExtractionRules` excluding all domains — patient data can no longer be
+  extracted via `adb backup` or Android cloud/device-transfer backups
+- Recover: cloud backups can no longer be uploaded unencrypted, are addressed
+  by short-lived **signed** URLs instead of public URLs (a public bucket would
+  expose any patient's PHI by path guessing), and use a random per-backup
+  PBKDF2 salt instead of a salt derived from the password
+- Recover: PIN unlock now uses PBKDF2-SHA-256 (100k iterations, random salt,
+  constant-time compare) instead of a reversible 32-bit non-cryptographic hash
+- Recover: lock-screen notifications no longer disclose PHI — meeting names
+  and "N days sober" milestone counts are replaced with generic text; the
+  specifics travel only in the notification payload surfaced inside the app
+- Recover: on-device auto-backups (the full app dataset) are now encrypted at
+  rest like the live stores — previously they were written to localStorage as
+  plaintext JSON, bypassing encryption entirely
+- Recover: "Delete all data" now performs a real device wipe — clears every
+  store and sync/device/biometric key and crypto-shreds the master key
+  (previously it only removed a single unused legacy key)
+- Recover: a failed decrypt no longer silently overwrites the unreadable
+  ciphertext on the next write, preventing a transient key error from causing
+  permanent data loss
+- Recover: storage layer no longer logs PHI fragments to the console
+
+### Added
+- `src/lib/device-encryption.ts` (master key + AES-GCM encrypt/decrypt +
+  crypto-shred), `src/lib/encrypted-storage.ts` (Zustand persistence adapter),
+  and `src/lib/device-wipe.ts` in the Recover app, with unit tests
+
+## [1.8.0] - 2026-06-12
+
+### Security
+- Two-factor authentication is now enforced at staff login — accounts with 2FA enabled receive a short-lived pending token that must be exchanged with a valid TOTP code before any access/refresh tokens are issued; failed codes count toward the existing account lockout
+- WebSocket connections derive the user type (staff/patient) from the verified JWT payload instead of trusting the client-supplied value, preventing patients from registering as staff and receiving staff-targeted broadcasts
+- Typing indicators are only forwarded between connections in the same facility
+- Goal sync (`/sync/goals`, `/sync/batch`) scopes updates to the authenticated patient — a client-supplied `recoverGoalId` can no longer overwrite another patient's goal
+- Patient updates: facility transfers now require SUPER_ADMIN, and counselor reassignment validates the target is active staff at the patient's facility
+- Journey: document HTML is re-sanitized at render time (defense in depth on all `dangerouslySetInnerHTML` sites)
+- Journey: removed `'unsafe-inline'` from the CSP `script-src`; added explicit font-source allowances
+- Journey: React Query cache (cached PHI) is purged on logout
+- `authenticate` middleware now rejects unrecognized JWT payload shapes explicitly
+
+### Added
+- `POST /auth/staff/login/2fa` endpoint to complete a 2FA login
+- Two-factor code entry step in the Journey login page
+- Shared TOTP helper (`Backend/src/lib/totp.ts`) so 2FA parameters cannot drift between routes
+- Image-based deployments: the backend now deploys as a tagged GHCR image
+  (`ghcr.io/cleffnote44/recovery-journey/backend:<version>`) pulled on the
+  server, so the image tested in CI is the image that runs in production
+- Deployed-version tracking (`.deployed_version` / `.deployed_version.previous`)
+  makes `scripts/rollback.sh` an actual image-tag swap instead of a no-op rebuild
+- `deploy.sh --pull --image-tag <tag>` to deploy a registry tag without building
+- Container-aware backup/restore: `scripts/backup.sh` and `scripts/restore.sh`
+  dump/restore via `docker exec` when the database container is running
+  (the production database publishes no host port)
+
+### Fixed
+- Production compose invocation: `docker-compose.prod.yml` is an override and is
+  now always combined with the base file in CD, `deploy.sh`, and `rollback.sh`
+  (standalone invocation could not start the stack)
+- Compose override now uses `!reset` for `db.ports` and `backend.volumes` —
+  empty-list overrides were silently appended, leaving the database port
+  published and dev bind mounts active in production
+- Production compose now passes `ENCRYPTION_KEY`/`ENCRYPTION_SALT`/`AUDIT_SECRET`
+  to the backend container (startup previously exited: required in production)
+- `backup.sh` could never complete: log output corrupted the file paths returned
+  via command substitution (logs now go to stderr), and it rejected the
+  environment argument the CD pipeline and nightly cron pass
+- `restore.sh` could never restore an encrypted backup: the decrypted temp file
+  lost its `.gz` extension so decompression was skipped (verified end-to-end
+  against a live postgres: backup → drop → restore → data intact)
+- `deploy.sh` built the development image for production deploys (missing
+  `--target production`), ran vitest in watch mode (hung forever), and died in
+  its health-wait loop (`((var++))` returns non-zero under `set -e`)
+- CD checked out a non-existent git ref for tag deploys (`1.8.0` instead of the
+  tag's commit) and deployed a version label that matched no pushed image tag
+- Scheduled backup workflow now honors the manually selected environment,
+  verifies the exact encrypted file each run produced, and fails loudly
+- `compose run --rm migrate` reads stdin from /dev/null — when invoked through
+  `ssh bash -s` it would otherwise swallow the rest of the deploy script and
+  silently leave the old backend running against the new schema
+- Deploy/backup workflows fail closed when the target host secret is unset
+  instead of silently falling back to the other environment's host; deploys
+  are serialized per environment via a concurrency group
+- Staging/production env templates: `NODE_ENV=staging` (invalid enum, crashed
+  the backend), `CORS_ORIGIN` (backend reads `CORS_ORIGINS`), wrong port (3000
+  vs 8000), and dead variables the backend never reads
+
+### Changed
+- Database migrations run on the deploy host inside the compose network
+  (`compose run --rm migrate`) using the same image as the backend — the
+  production database is no longer expected to be reachable from GitHub runners
+- `prisma` moved from devDependencies to dependencies so the production image
+  contains the CLI that `migrate deploy` needs (no runtime npm download)
+- Pre-deployment backups are mandatory: CD aborts the deploy if the backup
+  fails (failures were previously masked as "non-fatal")
+- SSH host keys are pinned via the `SSH_KNOWN_HOSTS` secret;
+  `StrictHostKeyChecking=no` removed from all pipelines
+- Backend Docker image pinned to `node:22-alpine` (LTS — was non-LTS node:25);
+  Journey image moved off end-of-life `node:18-alpine`
+- Backup encryption keys are passed to openssl via the environment instead of
+  the command line; restore pre-dumps are now encrypted too
+- Workflow permissions scoped to least privilege (`contents: read` default);
+  manual production deploys must be dispatched from `main`
+- `.gitignore` now covers backup artifacts (`backups/`, dump patterns) and key
+  material (`*.pem`, `*.key`, `*.keystore`, `*.p12`)
+- Backend/root lockfiles regenerated (root was stale at 1.7.0)
+
 ## [1.7.2] - 2026-04-04
 
 ### Security

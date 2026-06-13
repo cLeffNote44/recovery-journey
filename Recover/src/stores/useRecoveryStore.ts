@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Relapse, CleanPeriod, StepWorkProgress, ReasonForSobriety } from '@/types/app';
 import { sanitizeText } from '@/lib/sanitize';
+import { createEncryptedStorage } from '@/lib/encrypted-storage';
 
 interface RecoveryState {
   // State
@@ -144,6 +145,7 @@ export const useRecoveryStore = create<RecoveryState>()(
     }),
     {
       name: 'recovery-store',
+      storage: createEncryptedStorage(),
     }
   )
 );

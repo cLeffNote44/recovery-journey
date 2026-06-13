@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react'
 import {
   FileText,
   Plus,
   ChevronRight,
   X,
   GripVertical,
+  AlertTriangle,
 } from 'lucide-react'
 
 // ============================================================================
@@ -14,7 +16,7 @@ export interface TreatmentPhase {
   id: string
   name: string
   duration: number
-  durationUnit: 'days' | 'weeks'
+  durationUnit: 'days' | 'weeks' | 'months'
   goals: string[]
   activities: string[]
 }
@@ -259,11 +261,12 @@ export function PhaseEditor({ phases, onAddPhase, onUpdatePhase, onRemovePhase }
                   <select
                     id={`phase-unit-${phase.id}`}
                     value={phase.durationUnit}
-                    onChange={(e) => onUpdatePhase(phase.id, { durationUnit: e.target.value as 'days' | 'weeks' })}
+                    onChange={(e) => onUpdatePhase(phase.id, { durationUnit: e.target.value as 'days' | 'weeks' | 'months' })}
                     className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
                   >
                     <option value="days">days</option>
                     <option value="weeks">weeks</option>
+                    <option value="months">months</option>
                   </select>
                 </div>
                 <button
@@ -319,6 +322,8 @@ interface AssignPlanModalProps {
   onClose: () => void
   selectedPlan: TreatmentPlan | null
   patients: Patient[]
+  onAssign?: (patientId: string) => void
+  isAssigning?: boolean
 }
 
 export function AssignPlanModal({
@@ -326,8 +331,20 @@ export function AssignPlanModal({
   onClose,
   selectedPlan,
   patients,
+  onAssign,
+  isAssigning = false,
 }: AssignPlanModalProps) {
+  const [selectedPatientId, setSelectedPatientId] = useState<string>('')
+
+  // Reset the selection whenever the modal opens or the target plan changes.
+  useEffect(() => {
+    if (isOpen) setSelectedPatientId('')
+  }, [isOpen, selectedPlan?.id])
+
   if (!isOpen || !selectedPlan) return null
+
+  const isActive = selectedPlan.status === 'active'
+  const canAssign = isActive && !!selectedPatientId && !isAssigning
 
   return (
     <div
@@ -357,42 +374,66 @@ export function AssignPlanModal({
           </p>
         </div>
 
+        {!isActive && (
+          <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/40 rounded-lg flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" aria-hidden="true" />
+            <p className="text-xs text-yellow-800 dark:text-yellow-200">
+              This plan is a {selectedPlan.status}. Activate it before assigning it to a patient.
+            </p>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Select Patient
           </label>
-          <div className="space-y-2 max-h-64 overflow-y-auto" role="group" aria-label="Available patients">
-            {patients.map((patient) => (
-              <label
-                key={patient.id}
-                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
-                  patient.currentPlan
-                    ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    disabled={!!patient.currentPlan}
-                    className="w-4 h-4 text-blue-600 rounded"
-                    aria-describedby={patient.currentPlan ? `patient-${patient.id}-plan` : undefined}
-                  />
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">{patient.name}</p>
-                    {patient.currentPlan && (
-                      <p id={`patient-${patient.id}-plan`} className="text-xs text-gray-500 dark:text-gray-400">
-                        Currently in: {patient.currentPlan}
-                      </p>
+          {patients.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
+              No patients available to assign.
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-y-auto" role="radiogroup" aria-label="Available patients">
+              {patients.map((patient) => {
+                const disabled = !!patient.currentPlan || !isActive
+                const selected = selectedPatientId === patient.id
+                return (
+                  <label
+                    key={patient.id}
+                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                      disabled
+                        ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 cursor-not-allowed'
+                        : selected
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/50 cursor-pointer'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/50 cursor-pointer'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="assign-patient"
+                        checked={selected}
+                        disabled={disabled}
+                        onChange={() => setSelectedPatientId(patient.id)}
+                        className="w-4 h-4 text-blue-600"
+                        aria-describedby={patient.currentPlan ? `patient-${patient.id}-plan` : undefined}
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">{patient.name}</p>
+                        {patient.currentPlan && (
+                          <p id={`patient-${patient.id}-plan`} className="text-xs text-gray-500 dark:text-gray-400">
+                            Currently in: {patient.currentPlan}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {!disabled && !selected && (
+                      <ChevronRight className="w-4 h-4 text-gray-400" aria-hidden="true" />
                     )}
-                  </div>
-                </div>
-                {!patient.currentPlan && (
-                  <ChevronRight className="w-4 h-4 text-gray-400" aria-hidden="true" />
-                )}
-              </label>
-            ))}
-          </div>
+                  </label>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
@@ -403,10 +444,13 @@ export function AssignPlanModal({
             Cancel
           </button>
           <button
-            onClick={onClose}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            onClick={() => {
+              if (canAssign && onAssign) onAssign(selectedPatientId)
+            }}
+            disabled={!canAssign}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Assign Plan
+            {isAssigning ? 'Assigning…' : 'Assign Plan'}
           </button>
         </div>
       </div>
@@ -418,14 +462,32 @@ export function AssignPlanModal({
 // EDIT PLAN MODAL
 // ============================================================================
 
+export interface EditPlanUpdates {
+  name: string
+  description: string
+  status: 'active' | 'draft' | 'archived'
+}
+
 interface EditPlanModalProps {
   plan: TreatmentPlan | null
   onClose: () => void
-  onSave: () => void
+  onSave: (updates: EditPlanUpdates) => void
+  isSaving?: boolean
 }
 
-export function EditPlanModal({ plan, onClose, onSave }: EditPlanModalProps) {
+export function EditPlanModal({ plan, onClose, onSave, isSaving = false }: EditPlanModalProps) {
+  const [form, setForm] = useState<EditPlanUpdates>({ name: '', description: '', status: 'draft' })
+
+  // Re-seed the form whenever a different plan is opened for editing.
+  useEffect(() => {
+    if (plan) {
+      setForm({ name: plan.name, description: plan.description, status: plan.status })
+    }
+  }, [plan])
+
   if (!plan) return null
+
+  const canSave = form.name.trim().length > 0 && !isSaving
 
   return (
     <div
@@ -455,7 +517,8 @@ export function EditPlanModal({ plan, onClose, onSave }: EditPlanModalProps) {
             <input
               id="edit-plan-name"
               type="text"
-              defaultValue={plan.name}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
           </div>
@@ -465,7 +528,8 @@ export function EditPlanModal({ plan, onClose, onSave }: EditPlanModalProps) {
             </label>
             <textarea
               id="edit-plan-description"
-              defaultValue={plan.description}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
@@ -476,7 +540,8 @@ export function EditPlanModal({ plan, onClose, onSave }: EditPlanModalProps) {
             </label>
             <select
               id="edit-plan-status"
-              defaultValue={plan.status}
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value as EditPlanUpdates['status'] })}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="draft">Draft</option>
@@ -493,10 +558,11 @@ export function EditPlanModal({ plan, onClose, onSave }: EditPlanModalProps) {
             Cancel
           </button>
           <button
-            onClick={onSave}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            onClick={() => { if (canSave) onSave(form) }}
+            disabled={!canSave}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save Changes
+            {isSaving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
       </div>

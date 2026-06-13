@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../stores/authStore'
 import {
   Users,
@@ -11,6 +12,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { facilityAPI } from '../services/api'
+import { queryKeys } from '../lib/queryClient'
 import {
   mockDashboardStats,
   mockAppointments,
@@ -27,6 +29,17 @@ import {
   Skeleton,
 } from '../components/LoadingState'
 import { SectionErrorBoundary } from '../components/ErrorBoundary'
+
+interface PatientAlert {
+  id: string
+  type: string
+  severity: 'critical' | 'high' | 'medium'
+  patientId: string
+  patientName: string
+  title: string
+  description: string
+  timestamp: string
+}
 
 export default function Dashboard() {
   const { user } = useAuthStore()
@@ -67,7 +80,17 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboardData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch only when facility changes
   }, [user?.facility_id])
+
+  // Real patient alerts (high cravings, low mood) via React Query, so the
+  // WebSocket handler can refresh them live by invalidating this key.
+  const { data: alertsData } = useQuery({
+    queryKey: queryKeys.dashboard.alerts(),
+    queryFn: () => facilityAPI.getAlerts(),
+    enabled: !!user,
+  })
+  const alerts: PatientAlert[] = alertsData?.success ? alertsData.alerts ?? [] : []
 
   const getReminderIcon = (iconType: string) => {
     switch (iconType) {
@@ -91,7 +114,7 @@ export default function Dashboard() {
             Welcome back, {user?.first_name || 'Clinician'}!
           </h1>
           <p className="text-primary-100 mt-1">
-            Here's an overview of your facility's activity today.
+            Here&apos;s an overview of your facility&apos;s activity today.
           </p>
           {isUsingMockData && !isLoading && (
             <div className="flex items-center gap-3 mt-2">
@@ -145,6 +168,56 @@ export default function Dashboard() {
               icon={TrendingUp}
               color="purple"
             />
+          </div>
+        )}
+
+        {/* Patient Alerts (triage) — only shown when there are active alerts */}
+        {alerts.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-card overflow-hidden border-l-4 border-red-500">
+            <div className="bg-red-50 dark:bg-red-900/20 px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              <h2 className="font-semibold text-gray-900 dark:text-white">
+                Patient Alerts ({alerts.length})
+              </h2>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              {alerts.map((alert) => (
+                <button
+                  key={alert.id}
+                  onClick={() => navigate(`/patients/${alert.patientId}`)}
+                  className="w-full text-left px-5 py-3 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <span
+                    className={`mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                      alert.severity === 'critical'
+                        ? 'bg-red-500'
+                        : alert.severity === 'high'
+                          ? 'bg-orange-500'
+                          : 'bg-yellow-500'
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium text-gray-900 dark:text-white truncate">
+                        {alert.patientName}
+                      </p>
+                      <span className="text-xs text-gray-400 flex items-center gap-1 flex-shrink-0">
+                        <Clock className="w-3 h-3" />
+                        {new Date(alert.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{alert.title}</p>
+                    {alert.description && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                        {alert.description}
+                      </p>
+                    )}
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0 mt-1" />
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

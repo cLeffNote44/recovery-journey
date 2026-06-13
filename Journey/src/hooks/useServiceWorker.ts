@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- intentional service-worker diagnostics; stripped from prod builds */
 import { useState, useEffect, useCallback } from 'react'
 
 /**
@@ -137,6 +138,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
     }
 
     register()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
   }, [])
 
   // Listen for messages from service worker
@@ -174,6 +176,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
     return () => {
       navigator.serviceWorker.removeEventListener('message', handleMessage)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- subscribe once on mount
   }, [])
 
   // Monitor online/offline status
@@ -195,6 +198,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- forceSync is stable; subscribe once
   }, [])
 
   // Action: Update service worker
@@ -213,7 +217,8 @@ export function useServiceWorker(): UseServiceWorkerReturn {
 
     // Also try to trigger background sync if supported
     if (registration && 'sync' in registration) {
-      (registration as any).sync.register('sync-requests').catch(console.error)
+      (registration as ServiceWorkerRegistration & { sync: { register(tag: string): Promise<void> } })
+        .sync.register('sync-requests').catch(console.error)
     }
   }, [registration])
 

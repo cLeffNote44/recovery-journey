@@ -20,6 +20,7 @@ import { type TrashItemType } from '@/lib/trash-system';
 const AnalyticsScreen = lazy(() => import('./AnalyticsScreen').then(m => ({ default: m.AnalyticsScreen })));
 import { requestNotificationPermission, checkNotificationPermission, isNative } from '@/lib/notifications';
 import { exportBackupData, importBackupData, getBackupStats, getAutoBackups, restoreAutoBackup, deleteAutoBackup, getDaysSinceLastBackup, createAutoBackup } from '@/lib/data-backup';
+import { wipeAllDeviceData } from '@/lib/device-wipe';
 import type { BackupData } from '@/lib/data-backup';
 import { toast } from 'sonner';
 
@@ -56,8 +57,13 @@ export function SettingsScreen() {
   const [showCloudSync, setShowCloudSync] = useState(false);
   const [showWidgetConfig, setShowWidgetConfig] = useState(false);
   const [showAutoBackups, setShowAutoBackups] = useState(false);
-  const [autoBackups, setAutoBackups] = useState(getAutoBackups());
+  const [autoBackups, setAutoBackups] = useState<Awaited<ReturnType<typeof getAutoBackups>>>([]);
   const [daysSinceBackup, setDaysSinceBackup] = useState(getDaysSinceLastBackup());
+
+  // Auto-backups are encrypted at rest, so loading them is async.
+  useEffect(() => {
+    getAutoBackups().then(setAutoBackups).catch(() => setAutoBackups([]));
+  }, []);
   const [showCSVExport, setShowCSVExport] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -118,16 +124,16 @@ export function SettingsScreen() {
     }
   };
 
-  const handleCreateAutoBackup = () => {
+  const handleCreateAutoBackup = async () => {
     try {
       // Get all app data from context
       const { loading, ...appData } = context;
 
-      // Create auto backup
-      createAutoBackup(appData);
+      // Create auto backup (encrypted at rest)
+      await createAutoBackup(appData);
 
       // Refresh auto backups list
-      setAutoBackups(getAutoBackups());
+      setAutoBackups(await getAutoBackups());
       setDaysSinceBackup(0);
 
       toast.success('Auto backup created successfully! 💾');
@@ -140,8 +146,8 @@ export function SettingsScreen() {
   const handleRestoreAutoBackup = (key: string) => {
     setConfirmAction({
       message: 'This will replace all your current data with the backup. Continue?',
-      action: () => {
-        const result = restoreAutoBackup(key);
+      action: async () => {
+        const result = await restoreAutoBackup(key);
         if (result.success && result.data) {
           localStorage.setItem('recovery_journey_data', JSON.stringify(result.data));
           toast.success('Data restored successfully! Refreshing... 🔄');
@@ -156,9 +162,9 @@ export function SettingsScreen() {
   const handleDeleteAutoBackup = (key: string) => {
     setConfirmAction({
       message: 'Delete this auto backup?',
-      action: () => {
+      action: async () => {
         deleteAutoBackup(key);
-        setAutoBackups(getAutoBackups());
+        setAutoBackups(await getAutoBackups());
         toast.success('Auto backup deleted');
       }
     });
@@ -234,12 +240,13 @@ export function SettingsScreen() {
 
   const handleClearData = () => {
     setConfirmAction({
-      message: 'Are you sure you want to delete all your data? This action cannot be undone.',
+      message: 'Are you sure you want to delete all your data? This permanently erases every entry on this device and cannot be undone.',
       action: async () => {
         setIsClearing(true);
-        await new Promise(resolve => setTimeout(resolve, 300));
-        localStorage.removeItem('recovery_journey_data');
-        toast.success('All data cleared. Refreshing...');
+        // Full device wipe: clears all stores, sync/device keys, and
+        // crypto-shreds the at-rest encryption key.
+        await wipeAllDeviceData();
+        toast.success('All data deleted. Refreshing...');
         setTimeout(() => window.location.reload(), 1000);
       }
     });
