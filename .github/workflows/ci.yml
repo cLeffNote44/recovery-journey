@@ -432,10 +432,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Audit workspace dependencies (pnpm)
+        # Hard gate: fail CI on any new high/critical dependency CVE in the
+        # pnpm workspace. The tree is at zero after the CVE remediation, so this
+        # keeps regressions from landing.
         run: pnpm audit --audit-level=high
-        # Informational: known pre-existing transitive-dependency CVEs are
-        # surfaced in the logs but do not gate merges (tracked separately).
-        continue-on-error: true
 
   # ===========================================
   # Security Scanning
@@ -460,14 +460,16 @@ jobs:
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
-        # Only publish to code scanning on pushes to the default branches.
-        # On pull requests this avoids a hard-failing "Trivy" code-scanning
-        # check for pre-existing dependency CVEs that predate the PR —
-        # consistent with the dependency-audit jobs, which are already
-        # informational (continue-on-error). The scan itself still runs on
-        # PRs, so findings remain visible in the job logs, and code scanning
-        # is still updated on pushes to main/develop.
-        if: always() && github.event_name == 'push'
+        # Publish to code scanning on both pushes and PRs. The workspace
+        # dependency tree is clean, so Trivy findings now surface on the PR.
+        # (Trivy's fs scan also covers out-of-workspace manifests like
+        # website/package-lock.json, so it is reported to code scanning for
+        # visibility but is not a hard ci-success gate yet — pnpm audit is the
+        # hard dependency gate for the workspace.)
+        if: always()
+        # Best-effort: a code-scanning upload hiccup (token/permission) must not
+        # block CI — the Trivy scan still ran and is visible in the job logs.
+        continue-on-error: true
         with:
           sarif_file: 'trivy-results.sarif'
 
