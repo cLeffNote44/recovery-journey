@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach, type SpyInstance } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useBeforeUnload, useFormDirtyState } from './useUnsavedChanges'
 
@@ -7,10 +7,8 @@ import { useBeforeUnload, useFormDirtyState } from './useUnsavedChanges'
 // These tests focus on the utility hooks that can be tested independently.
 
 describe('useBeforeUnload', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let addEventListenerSpy: SpyInstance<any, any>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let removeEventListenerSpy: SpyInstance<any, any>
+  let addEventListenerSpy: MockInstance
+  let removeEventListenerSpy: MockInstance
 
   beforeEach(() => {
     addEventListenerSpy = vi.spyOn(window, 'addEventListener')
