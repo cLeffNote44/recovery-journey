@@ -93,6 +93,7 @@ vi.mock('../config/env.js', () => ({
     DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
     JWT_SECRET: 'test-secret-key-that-is-long-enough-for-testing',
     JWT_REFRESH_SECRET: 'test-refresh-secret-key-that-is-long-enough',
+    AUDIT_SECRET: 'test-audit-secret-key-for-ci-only',
     JWT_EXPIRES_IN: '1h',
     JWT_REFRESH_EXPIRES_IN: '7d',
     PORT: 8000,
