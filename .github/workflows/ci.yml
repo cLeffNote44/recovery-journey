@@ -478,7 +478,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         # Best-effort: a code-scanning upload hiccup (token/permission) must not
         # block CI — the gate step above already enforces the policy.
