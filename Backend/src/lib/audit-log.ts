@@ -1,9 +1,13 @@
-import { createHmac } from 'node:crypto'
+import { Prisma, type AuditAction } from '@prisma/client'
 import { prisma } from './prisma.js'
-import type { AuditAction } from '@prisma/client'
 import type { FastifyRequest } from 'fastify'
 import logger from './logger.js'
 import { config } from '../config/env.js'
+import { auditRowContent, computeRowHash } from './audit-hash.js'
+
+// Fixed key for the Postgres advisory lock that serializes audit-chain writes,
+// keeping the hash chain strictly linear under concurrent requests.
+const AUDIT_CHAIN_LOCK_KEY = 4815162342n
 
 interface AuditContext {
   staffId?: string
@@ -26,18 +30,6 @@ interface AuditEntry {
   // after a separate, already-committed write — that would return an error to
   // the client while the write stands, risking duplicate/partial state.
   critical?: boolean
-}
-
-/**
- * Keyed HMAC over the audit row's canonical contents, for tamper evidence.
- * Returns null when no AUDIT_SECRET is configured (dev only — production
- * requires it via env validation).
- */
-function computeAuditHash(row: Record<string, unknown>): string | null {
-  const secret = config.AUDIT_SECRET
-  if (!secret) return null
-  const canonical = JSON.stringify(row)
-  return createHmac('sha256', secret).update(canonical).digest('hex')
 }
 
 /**
@@ -69,11 +61,18 @@ export class AuditLogger {
   }
 
   /**
-   * Log an audit entry
+   * Log an audit entry.
+   *
+   * Pass `tx` to write the audit row inside a caller-owned transaction, so the
+   * audited operation and its audit record commit (or roll back) atomically —
+   * the only safe way to use `entry.critical`. Without `tx`, the write runs in
+   * its own transaction.
+   *
+   * Each row is hash-chained to the previous one (see audit-hash.ts). Writes are
+   * serialized with a Postgres advisory lock so the chain stays linear.
    */
-  async log(entry: AuditEntry): Promise<void> {
-    const timestamp = new Date()
-    const row = {
+  async log(entry: AuditEntry, tx?: Prisma.TransactionClient): Promise<void> {
+    const base = {
       staffId: this.context.staffId ?? null,
       patientActorId: this.context.patientActorId ?? null,
       action: entry.action,
@@ -86,17 +85,42 @@ export class AuditLogger {
       sessionId: this.context.request?.id ?? null,
       success: entry.success ?? true,
       errorMessage: entry.errorMessage ?? null,
-      timestamp: timestamp.toISOString()
+    }
+    const secret = config.AUDIT_SECRET
+
+    const writeWith = async (db: Prisma.TransactionClient): Promise<void> => {
+      let prevHash: string | null = null
+      if (secret) {
+        // Serialize chain writes (xact-scoped advisory lock, auto-released on
+        // commit/rollback) so concurrent audits can't fork the chain.
+        await db.$queryRaw`SELECT pg_advisory_xact_lock(${AUDIT_CHAIN_LOCK_KEY})`
+        const last = await db.auditLog.findFirst({
+          orderBy: [{ timestamp: 'desc' }, { id: 'desc' }],
+          select: { hash: true },
+        })
+        prevHash = last?.hash ?? null
+      }
+      // Capture the timestamp inside the lock so it reflects the serialized
+      // write order — keeps the stored chain order consistent with the
+      // (timestamp, id) order the verifier walks.
+      const timestamp = new Date()
+      const content = auditRowContent({ ...base, timestamp })
+      await db.auditLog.create({
+        data: {
+          ...base,
+          timestamp,
+          prevHash,
+          hash: secret ? computeRowHash(content, prevHash, secret) : null,
+        },
+      })
     }
 
     try {
-      await prisma.auditLog.create({
-        data: {
-          ...row,
-          timestamp,
-          hash: computeAuditHash(row)
-        }
-      })
+      if (tx) {
+        await writeWith(tx)
+      } else {
+        await prisma.$transaction(writeWith)
+      }
     } catch (error) {
       // Always surface the failure to the structured logger.
       logger.error('Failed to write audit log', error as Error)

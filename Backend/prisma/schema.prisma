@@ -554,9 +554,11 @@ model AuditLog {
   errorMessage  String?  @map("error_message")
 
   // Tamper-evidence: keyed HMAC (AUDIT_SECRET) over the row's canonical
-  // contents. Detects in-place edits of an individual row. (Detecting
-  // deletes/reordering requires a hash chain — tracked as future work.)
+  // contents, chained to the previous row's hash via `prevHash`. The content
+  // HMAC detects in-place edits; the chain link detects deletes, reordering,
+  // and forged insertions. See src/lib/audit-hash.ts.
   hash          String?
+  prevHash      String?  @map("prev_hash")
 
   timestamp     DateTime @default(now())
 

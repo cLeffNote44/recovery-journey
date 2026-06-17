@@ -5,6 +5,8 @@ import { prisma } from '../lib/prisma.js'
 import { ApiError } from '../lib/error-handler.js'
 import { AuditLogger } from '../lib/audit-log.js'
 import { requireSuperAdmin, requireFacilityAdmin } from '../middleware/auth.js'
+import { config } from '../config/env.js'
+import { verifyAuditChain, type StoredAuditRow } from '../lib/audit-hash.js'
 
 // Validation schemas
 const createFacilitySchema = z.object({
@@ -514,6 +516,44 @@ export async function adminRoutes(fastify: FastifyInstance) {
     })
 
     return { success: true, activities }
+  })
+
+  /**
+   * GET /admin/audit/verify
+   * Verify the integrity of the audit-log hash chain over the most recent
+   * window. Detects in-place edits, deletions, reordering, and forged
+   * insertions. SUPER_ADMIN only (compliance action).
+   */
+  fastify.get('/audit/verify', { preHandler: [requireSuperAdmin] }, async (request: FastifyRequest) => {
+    const query = z.object({
+      limit: z.coerce.number().min(1).max(10000).default(1000)
+    }).parse(request.query)
+
+    if (!config.AUDIT_SECRET) {
+      return {
+        success: true,
+        configured: false,
+        message: 'AUDIT_SECRET is not configured; audit-log hashing is disabled.'
+      }
+    }
+
+    // Most-recent window, oldest-first, plus the row immediately preceding it as
+    // the chain anchor so the window's first link can be checked.
+    const windowDesc = await prisma.auditLog.findMany({
+      orderBy: [{ timestamp: 'desc' }, { id: 'desc' }],
+      take: query.limit
+    })
+    const rows = windowDesc.slice().reverse() as unknown as StoredAuditRow[]
+
+    const [anchor] = await prisma.auditLog.findMany({
+      orderBy: [{ timestamp: 'desc' }, { id: 'desc' }],
+      skip: query.limit,
+      take: 1,
+      select: { hash: true }
+    })
+
+    const result = verifyAuditChain(rows, config.AUDIT_SECRET, anchor?.hash ?? null)
+    return { success: true, configured: true, ...result }
   })
 
   /**
