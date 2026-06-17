@@ -168,19 +168,25 @@ export async function messageRoutes(fastify: FastifyInstance) {
       throw ApiError.forbidden('Cannot send messages to this patient')
     }
 
-    // Create message
-    const message = await prisma.message.create({
-      data: {
-        patientId: body.recipientId,
-        staffId: user.id,
-        senderType: 'STAFF',
-        content: body.content,
-        messageType: body.messageType ?? 'TEXT',
-        priority: body.priority ?? 'NORMAL'
-      }
+    // Create the message and its audit record atomically, so a sent message is
+    // never left unaudited (and vice versa).
+    const message = await prisma.$transaction(async (tx) => {
+      const m = await tx.message.create({
+        data: {
+          patientId: body.recipientId,
+          staffId: user.id,
+          senderType: 'STAFF',
+          content: body.content,
+          messageType: body.messageType ?? 'TEXT',
+          priority: body.priority ?? 'NORMAL'
+        }
+      })
+      await audit.messageSend(body.recipientId, m.id, tx)
+      return m
     })
 
-    // Broadcast to patient via WebSocket
+    // Broadcast to patient via WebSocket — a post-commit side effect, kept
+    // outside the transaction so we never notify on a write that rolled back.
     broadcastToUser(`patient:${body.recipientId}`, {
       type: 'message.new',
       data: {
@@ -189,9 +195,6 @@ export async function messageRoutes(fastify: FastifyInstance) {
         senderName: `${user.id}` // Will be resolved on client
       }
     })
-
-    // Audit log
-    await audit.messageSend(body.recipientId, message.id)
 
     return {
       success: true,
