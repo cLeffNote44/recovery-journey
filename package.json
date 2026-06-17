@@ -4,7 +4,7 @@
   "description": "HIPAA-compliant substance abuse recovery management platform",
   "private": true,
   "scripts": {
-    "prepare": "husky install || true",
+    "prepare": "husky || true",
     "lint": "pnpm -r --if-present run lint",
     "test": "pnpm -r --if-present run test",
     "build": "pnpm -r --if-present run build",
