@@ -448,8 +448,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner (hard gate)
         uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          ignore-unfixed: true
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          # Hard gate: fail CI on any fixable CRITICAL/HIGH found anywhere Trivy's
+          # filesystem scan reaches — including out-of-workspace manifests
+          # (website/package-lock.json, Backend/package-lock.json) that the pnpm
+          # workspace `pnpm audit` gate does not cover. Readable table output
+          # lands in the job log for triage.
+          exit-code: '1'
+
+      - name: Run Trivy vulnerability scanner (SARIF report)
+        uses: aquasecurity/trivy-action@master
+        # Always build the report, even when the gate above failed, so findings
+        # are uploaded to code scanning for triage. The DB is cached from the
+        # gate step, so this second pass is fast.
+        if: always()
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -460,15 +479,9 @@ jobs:
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
-        # Publish to code scanning on both pushes and PRs. The workspace
-        # dependency tree is clean, so Trivy findings now surface on the PR.
-        # (Trivy's fs scan also covers out-of-workspace manifests like
-        # website/package-lock.json, so it is reported to code scanning for
-        # visibility but is not a hard ci-success gate yet — pnpm audit is the
-        # hard dependency gate for the workspace.)
         if: always()
         # Best-effort: a code-scanning upload hiccup (token/permission) must not
-        # block CI — the Trivy scan still ran and is visible in the job logs.
+        # block CI — the gate step above already enforces the policy.
         continue-on-error: true
         with:
           sarif_file: 'trivy-results.sarif'
