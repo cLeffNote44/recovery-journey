@@ -22,25 +22,31 @@ vi.mock('../lib/prisma.js', () => {
     deleteMany: vi.fn(),
     count: vi.fn(),
   })
-  return {
-    prisma: {
-      staff: m(),
-      patient: m(),
-      facility: m(),
-      refreshToken: m(),
-      registrationKey: m(),
-      patientDevice: m(),
-      checkIn: m(),
-      craving: m(),
-      patientGoal: m(),
-      treatmentAssignment: m(),
-      auditLog: m(),
-      message: m(),
-      $connect: vi.fn(),
-      $disconnect: vi.fn(),
-      $transaction: vi.fn((fns: any[]) => Promise.all(fns)),
-    },
+  const prisma: any = {
+    staff: m(),
+    patient: m(),
+    facility: m(),
+    refreshToken: m(),
+    registrationKey: m(),
+    patientDevice: m(),
+    checkIn: m(),
+    craving: m(),
+    patientGoal: m(),
+    treatmentAssignment: m(),
+    auditLog: m(),
+    message: m(),
+    $connect: vi.fn(),
+    $disconnect: vi.fn(),
+    $queryRaw: vi.fn().mockResolvedValue([]),
   }
+  // Support both the array form (`$transaction([p1, p2])`) and the callback
+  // form (`$transaction(async (tx) => …)`) used by transactional handlers.
+  // The callback receives the same mock as its transaction client, so route
+  // tests configure `mockPrisma.<model>.<op>` exactly as for non-tx calls.
+  prisma.$transaction = vi.fn((arg: any) =>
+    typeof arg === 'function' ? arg(prisma) : Promise.all(arg)
+  )
+  return { prisma }
 })
 
 vi.mock('../lib/audit-log.js', () => {
@@ -50,6 +56,8 @@ vi.mock('../lib/audit-log.js', () => {
     loginFailed: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue(undefined),
     checkInSync: vi.fn().mockResolvedValue(undefined),
+    messageSend: vi.fn().mockResolvedValue(undefined),
+    messageView: vi.fn().mockResolvedValue(undefined),
   }
   return {
     AuditLogger: class MockAuditLogger {
@@ -111,9 +119,14 @@ vi.mock('../config/env.js', () => ({
 // ─── Re-export the mock for test access ─────────────────────────────────────
 
 import { prisma } from '../lib/prisma.js'
+import { AuditLogger } from '../lib/audit-log.js'
 
 // Cast to any so tests can call .mockResolvedValue() etc.
 export const mockPrisma = prisma as any
+
+// The mocked AuditLogger always returns the same logger instance, so tests can
+// assert that handlers recorded the expected audit (e.g. inside a transaction).
+export const mockAudit = (AuditLogger as any).fromRequest() as any
 
 // ─── Fastify App Builder ────────────────────────────────────────────────────
 

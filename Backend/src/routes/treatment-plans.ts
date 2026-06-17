@@ -272,26 +272,28 @@ export async function treatmentPlanRoutes(fastify: FastifyInstance) {
       }
     }
 
-    // Create or update assignment
-    const assignment = await prisma.treatmentAssignment.upsert({
-      where: { patientId: body.patientId },
-      create: {
-        patientId: body.patientId,
-        treatmentPlanId: body.treatmentPlanId,
-        startDate: new Date(body.startDate),
-        currentPhaseIndex: 0,
-        status: 'ACTIVE'
-      },
-      update: {
-        treatmentPlanId: body.treatmentPlanId,
-        startDate: new Date(body.startDate),
-        currentPhaseIndex: 0,
-        status: 'ACTIVE',
-        completedAt: null
-      }
+    // Create or update assignment + audit atomically.
+    const assignment = await prisma.$transaction(async (tx) => {
+      const a = await tx.treatmentAssignment.upsert({
+        where: { patientId: body.patientId },
+        create: {
+          patientId: body.patientId,
+          treatmentPlanId: body.treatmentPlanId,
+          startDate: new Date(body.startDate),
+          currentPhaseIndex: 0,
+          status: 'ACTIVE'
+        },
+        update: {
+          treatmentPlanId: body.treatmentPlanId,
+          startDate: new Date(body.startDate),
+          currentPhaseIndex: 0,
+          status: 'ACTIVE',
+          completedAt: null
+        }
+      })
+      await audit.treatmentAssign(body.patientId, body.treatmentPlanId, tx)
+      return a
     })
-
-    await audit.treatmentAssign(body.patientId, body.treatmentPlanId)
 
     return {
       success: true,

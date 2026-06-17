@@ -173,23 +173,25 @@ export class AuditLogger {
     })
   }
 
-  async patientCreate(patientId: string): Promise<void> {
+  async patientCreate(patientId: string, tx?: Prisma.TransactionClient): Promise<void> {
     await this.log({
       action: 'PATIENT_CREATE',
       resourceType: 'patient',
       resourceId: patientId,
-      description: 'Created patient record'
-    })
+      description: 'Created patient record',
+      critical: !!tx
+    }, tx)
   }
 
-  async patientUpdate(patientId: string, fieldsUpdated: string[]): Promise<void> {
+  async patientUpdate(patientId: string, fieldsUpdated: string[], tx?: Prisma.TransactionClient): Promise<void> {
     await this.log({
       action: 'PATIENT_UPDATE',
       resourceType: 'patient',
       resourceId: patientId,
       phiAccessed: fieldsUpdated,
-      description: `Updated patient record fields: ${fieldsUpdated.join(', ')}`
-    })
+      description: `Updated patient record fields: ${fieldsUpdated.join(', ')}`,
+      critical: !!tx
+    }, tx)
   }
 
   async patientSearch(query: string, resultCount: number): Promise<void> {
@@ -229,13 +231,14 @@ export class AuditLogger {
     })
   }
 
-  async messageSend(patientId: string, messageId: string): Promise<void> {
+  async messageSend(patientId: string, messageId: string, tx?: Prisma.TransactionClient): Promise<void> {
     await this.log({
       action: 'MESSAGE_SEND',
       resourceType: 'message',
       resourceId: messageId,
-      description: `Sent message to patient ${patientId}`
-    })
+      description: `Sent message to patient ${patientId}`,
+      critical: !!tx
+    }, tx)
   }
 
   async treatmentView(treatmentPlanId: string): Promise<void> {
@@ -247,13 +250,14 @@ export class AuditLogger {
     })
   }
 
-  async treatmentAssign(patientId: string, planId: string): Promise<void> {
+  async treatmentAssign(patientId: string, planId: string, tx?: Prisma.TransactionClient): Promise<void> {
     await this.log({
       action: 'TREATMENT_ASSIGN',
       resourceType: 'treatment_assignment',
       resourceId: patientId,
-      description: `Assigned treatment plan ${planId} to patient`
-    })
+      description: `Assigned treatment plan ${planId} to patient`,
+      critical: !!tx
+    }, tx)
   }
 
   async consentCreate(patientId: string, consentId: string, consentType: string): Promise<void> {

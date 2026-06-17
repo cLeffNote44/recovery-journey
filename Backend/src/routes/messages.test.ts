@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
-import { buildApp, mockPrisma, makePatient, signTestToken } from '../test/setup.js'
+import { buildApp, mockPrisma, mockAudit, makePatient, signTestToken } from '../test/setup.js'
 import { broadcastToUser } from '../websocket/handler.js'
 import type { FastifyInstance } from 'fastify'
 
@@ -127,5 +127,87 @@ describe('Messages — patient crisis escalation', () => {
     expect(res.statusCode).toBe(401)
     // makePatient kept importable for parity with other suites
     void makePatient
+  })
+})
+
+describe('Messages — staff send (transactional + audited)', () => {
+  let app: FastifyInstance
+  let staffToken: string
+
+  beforeAll(async () => {
+    app = await buildApp()
+    staffToken = signTestToken(app, {
+      id: 'staff-1',
+      email: 'c@t.com',
+      role: 'COUNSELOR',
+      facilityId: 'facility-1',
+      tokenVersion: 0,
+    })
+  })
+
+  afterAll(async () => {
+    await app.close()
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // requireStaff re-checks the staff row.
+    mockPrisma.staff.findUnique.mockResolvedValue({
+      status: 'ACTIVE',
+      role: 'COUNSELOR',
+      facilityId: 'facility-1',
+      tokenVersion: 0,
+    })
+    mockPrisma.patient.findUnique.mockResolvedValue({
+      facilityId: 'facility-1',
+      assignedCounselorId: 'staff-1',
+    })
+    mockPrisma.message.create.mockResolvedValue({
+      id: 'msg-staff-1',
+      patientId: 'patient-1',
+      staffId: 'staff-1',
+      senderType: 'STAFF',
+      content: 'How are you today?',
+      priority: 'NORMAL',
+    })
+  })
+
+  const authHeaders = () => ({ authorization: `Bearer ${staffToken}` })
+
+  it('creates the message and its audit inside a single transaction', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/messages',
+      headers: authHeaders(),
+      payload: { recipientId: 'patient-1', content: 'How are you today?' },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().success).toBe(true)
+
+    // The create + audit go through one transaction…
+    expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1)
+    expect(mockPrisma.message.create).toHaveBeenCalledTimes(1)
+    // …and the audit is written with the transaction client (critical path).
+    expect(mockAudit.messageSend).toHaveBeenCalledWith(
+      'patient-1',
+      'msg-staff-1',
+      expect.anything()
+    )
+  })
+
+  it('broadcasts to the patient only after the transaction commits', async () => {
+    // If the create/audit transaction rejects, no broadcast should fire.
+    mockPrisma.$transaction.mockRejectedValueOnce(new Error('audit write failed'))
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/messages',
+      headers: authHeaders(),
+      payload: { recipientId: 'patient-1', content: 'How are you today?' },
+    })
+
+    expect(res.statusCode).toBe(500)
+    expect(mockBroadcast).not.toHaveBeenCalled()
   })
 })

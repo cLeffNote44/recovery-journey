@@ -301,40 +301,42 @@ export async function patientRoutes(fastify: FastifyInstance) {
     const registrationKey = generateRegistrationKey()
     const keyExpiresAt = new Date(Date.now() + config.REGISTRATION_KEY_EXPIRES_HOURS * 60 * 60 * 1000)
 
-    const patient = await prisma.patient.create({
-      data: {
-        firstName: body.firstName,
-        lastName: body.lastName,
-        dateOfBirth: new Date(body.dateOfBirth),
-        phone: body.phone,
-        email: body.email,
-        admissionDate: new Date(body.admissionDate),
-        sobrietyDate: new Date(body.sobrietyDate),
-        substancesOfChoice: body.substancesOfChoice ?? [],
-        emergencyContactName: body.emergencyContactName,
-        emergencyContactPhone: body.emergencyContactPhone,
-        emergencyContactRelationship: body.emergencyContactRelationship,
-        facilityId: body.facilityId,
-        assignedCounselorId: body.assignedCounselorId,
-        status: 'PENDING',
-        registrationKey: {
-          create: {
-            key: registrationKey,
-            expiresAt: keyExpiresAt,
-            createdById: user.id
+    // Mutation + audit commit atomically (a failed audit rolls back the create).
+    const patient = await prisma.$transaction(async (tx) => {
+      const created = await tx.patient.create({
+        data: {
+          firstName: body.firstName,
+          lastName: body.lastName,
+          dateOfBirth: new Date(body.dateOfBirth),
+          phone: body.phone,
+          email: body.email,
+          admissionDate: new Date(body.admissionDate),
+          sobrietyDate: new Date(body.sobrietyDate),
+          substancesOfChoice: body.substancesOfChoice ?? [],
+          emergencyContactName: body.emergencyContactName,
+          emergencyContactPhone: body.emergencyContactPhone,
+          emergencyContactRelationship: body.emergencyContactRelationship,
+          facilityId: body.facilityId,
+          assignedCounselorId: body.assignedCounselorId,
+          status: 'PENDING',
+          registrationKey: {
+            create: {
+              key: registrationKey,
+              expiresAt: keyExpiresAt,
+              createdById: user.id
+            }
+          }
+        },
+        include: {
+          registrationKey: true,
+          assignedCounselor: {
+            select: { id: true, firstName: true, lastName: true }
           }
         }
-      },
-      include: {
-        registrationKey: true,
-        assignedCounselor: {
-          select: { id: true, firstName: true, lastName: true }
-        }
-      }
+      })
+      await audit.patientCreate(created.id, tx)
+      return created
     })
-
-    // Audit log
-    await audit.patientCreate(patient.id)
 
     return {
       success: true,
@@ -394,19 +396,23 @@ export async function patientRoutes(fastify: FastifyInstance) {
     if (body.sobrietyDate) updateData.sobrietyDate = new Date(body.sobrietyDate)
     if (body.dischargeDate) updateData.dischargeDate = new Date(body.dischargeDate)
 
-    const patient = await prisma.patient.update({
-      where: { id },
-      data: updateData,
-      include: {
-        assignedCounselor: {
-          select: { id: true, firstName: true, lastName: true }
-        }
-      }
-    })
-
-    // Audit log
     const updatedFields = Object.keys(body).filter(k => body[k as keyof typeof body] !== undefined)
-    await audit.patientUpdate(id, updatedFields)
+
+    // Mutation + audit commit atomically: a failed audit write rolls the update
+    // back, so there is never a committed PHI change without an audit record.
+    const patient = await prisma.$transaction(async (tx) => {
+      const updated = await tx.patient.update({
+        where: { id },
+        data: updateData,
+        include: {
+          assignedCounselor: {
+            select: { id: true, firstName: true, lastName: true }
+          }
+        }
+      })
+      await audit.patientUpdate(id, updatedFields, tx)
+      return updated
+    })
 
     return {
       success: true,

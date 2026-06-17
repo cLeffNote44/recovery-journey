@@ -142,15 +142,16 @@ export async function adminRoutes(fastify: FastifyInstance) {
     const user = request.staffUser!
     const audit = AuditLogger.fromRequest(request, user.id)
 
-    const facility = await prisma.facility.create({
-      data: body
-    })
-
-    await audit.log({
-      action: 'FACILITY_CREATE',
-      resourceType: 'facility',
-      resourceId: facility.id,
-      description: `Created facility: ${facility.name}`
+    const facility = await prisma.$transaction(async (tx) => {
+      const created = await tx.facility.create({ data: body })
+      await audit.log({
+        action: 'FACILITY_CREATE',
+        resourceType: 'facility',
+        resourceId: created.id,
+        description: `Created facility: ${created.name}`,
+        critical: true
+      }, tx)
+      return created
     })
 
     return { success: true, facility }
@@ -166,16 +167,16 @@ export async function adminRoutes(fastify: FastifyInstance) {
     const user = request.staffUser!
     const audit = AuditLogger.fromRequest(request, user.id)
 
-    const facility = await prisma.facility.update({
-      where: { id },
-      data: body
-    })
-
-    await audit.log({
-      action: 'FACILITY_UPDATE',
-      resourceType: 'facility',
-      resourceId: id,
-      description: `Updated facility: ${facility.name}`
+    const facility = await prisma.$transaction(async (tx) => {
+      const updated = await tx.facility.update({ where: { id }, data: body })
+      await audit.log({
+        action: 'FACILITY_UPDATE',
+        resourceType: 'facility',
+        resourceId: id,
+        description: `Updated facility: ${updated.name}`,
+        critical: true
+      }, tx)
+      return updated
     })
 
     return { success: true, facility }
@@ -190,16 +191,18 @@ export async function adminRoutes(fastify: FastifyInstance) {
     const user = request.staffUser!
     const audit = AuditLogger.fromRequest(request, user.id)
 
-    await prisma.facility.update({
-      where: { id },
-      data: { status: 'SUSPENDED' }
-    })
-
-    await audit.log({
-      action: 'FACILITY_UPDATE',
-      resourceType: 'facility',
-      resourceId: id,
-      description: 'Suspended facility'
+    await prisma.$transaction(async (tx) => {
+      await tx.facility.update({
+        where: { id },
+        data: { status: 'SUSPENDED' }
+      })
+      await audit.log({
+        action: 'FACILITY_UPDATE',
+        resourceType: 'facility',
+        resourceId: id,
+        description: 'Suspended facility',
+        critical: true
+      }, tx)
     })
 
     return { success: true, message: 'Facility suspended' }
@@ -415,32 +418,35 @@ export async function adminRoutes(fastify: FastifyInstance) {
     // Hash password
     const passwordHash = await bcrypt.hash(body.password, 12)
 
-    const staff = await prisma.staff.create({
-      data: {
-        email: body.email.toLowerCase(),
-        passwordHash,
-        firstName: body.firstName,
-        lastName: body.lastName,
-        role: body.role,
-        facilityId: body.facilityId,
-        phone: body.phone
-      },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        phone: true,
-        status: true
-      }
-    })
-
-    await audit.log({
-      action: 'STAFF_CREATE',
-      resourceType: 'staff',
-      resourceId: staff.id,
-      description: `Created staff member: ${staff.firstName} ${staff.lastName}`
+    const staff = await prisma.$transaction(async (tx) => {
+      const created = await tx.staff.create({
+        data: {
+          email: body.email.toLowerCase(),
+          passwordHash,
+          firstName: body.firstName,
+          lastName: body.lastName,
+          role: body.role,
+          facilityId: body.facilityId,
+          phone: body.phone
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          phone: true,
+          status: true
+        }
+      })
+      await audit.log({
+        action: 'STAFF_CREATE',
+        resourceType: 'staff',
+        resourceId: created.id,
+        description: `Created staff member: ${created.firstName} ${created.lastName}`,
+        critical: true
+      }, tx)
+      return created
     })
 
     return { success: true, staff }
@@ -473,24 +479,27 @@ export async function adminRoutes(fastify: FastifyInstance) {
       throw ApiError.badRequest('Cannot deactivate your own account')
     }
 
-    await prisma.staff.update({
-      where: { id },
-      // Bump tokenVersion so any outstanding access token is rejected at the
-      // next request (requireStaff re-check), not just at expiry.
-      data: { status: 'INACTIVE', tokenVersion: { increment: 1 } }
-    })
+    await prisma.$transaction(async (tx) => {
+      await tx.staff.update({
+        where: { id },
+        // Bump tokenVersion so any outstanding access token is rejected at the
+        // next request (requireStaff re-check), not just at expiry.
+        data: { status: 'INACTIVE', tokenVersion: { increment: 1 } }
+      })
 
-    // Revoke all refresh tokens
-    await prisma.refreshToken.updateMany({
-      where: { staffId: id },
-      data: { revokedAt: new Date() }
-    })
+      // Revoke all refresh tokens
+      await tx.refreshToken.updateMany({
+        where: { staffId: id },
+        data: { revokedAt: new Date() }
+      })
 
-    await audit.log({
-      action: 'STAFF_DEACTIVATE',
-      resourceType: 'staff',
-      resourceId: id,
-      description: 'Deactivated staff member'
+      await audit.log({
+        action: 'STAFF_DEACTIVATE',
+        resourceType: 'staff',
+        resourceId: id,
+        description: 'Deactivated staff member',
+        critical: true
+      }, tx)
     })
 
     return { success: true, message: 'Staff member deactivated' }
