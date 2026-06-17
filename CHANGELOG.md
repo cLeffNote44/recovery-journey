@@ -5,6 +5,37 @@ All notable changes to the Recovery Journey platform will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.1] - 2026-06-14
+
+### Security
+- Dependency CVE remediation: brought the workspace from 51 known
+  vulnerabilities (7 critical, 30 high) to **0**. Cleared every critical and
+  high, including the runtime/attacker-reachable surface: axios (15+ CVEs incl.
+  SSRF & prototype pollution), react-router XSS, `fast-jwt` JWT auth-bypass
+  (via Fastify 5 + @fastify/jwt 10), jsPDF arbitrary-JS/LFI (v4), `@xmldom`,
+  `ws`, `fast-uri`, `shell-quote`, `simple-git`, the vitest/esbuild dev-server
+  chain, electron, and node-tar.
+- CI regression gate: `pnpm audit --audit-level=high` is now a hard
+  `ci-success` gate, and Trivy code-scanning is re-enabled on pull requests.
+
+### Changed
+- **Build tooling migrated to pnpm** (single root `pnpm-lock.yaml` +
+  `pnpm-workspace.yaml`); CI installs with `pnpm install --frozen-lockfile`.
+  This unblocked clean dependency resolution (the prior npm/per-workspace
+  lockfile setup masked real peer conflicts). The Backend Docker image still
+  builds standalone via npm.
+- Major dependency upgrades: Fastify 4→5 (+ @fastify/jwt 8→10, cors/helmet/
+  rate-limit/websocket), Vite 5→7 + Vitest 1/2→4 across all workspaces,
+  Electron 28→42 (+ electron-builder 24→26), jsPDF 3→4, Node CI image 20→22.
+  No application code changes were required for Fastify 5 or Electron 42.
+- Transitive pins via `pnpm.overrides` (`minimatch`, `fast-uri`, `esbuild`).
+
+### Fixed
+- `calculateDaysSober` now counts whole calendar days (was a flaky off-by-one
+  near the day boundary).
+- Removed two unused Vite plugins from Recover that capped Vite at 5; fixed a
+  time-dependent boundary flake in the relapse-risk-prediction test.
+
 ## [1.11.0] - 2026-06-13
 
 ### Added
